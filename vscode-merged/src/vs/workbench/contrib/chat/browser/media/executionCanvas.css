@@ -35,6 +35,11 @@
 	white-space: nowrap;
 }
 
+.chat-execution-canvas-stage.complete {
+	border-color: var(--vscode-testing-iconPassed);
+	color: var(--vscode-testing-iconPassed);
+}
+
 .chat-execution-canvas-stage.active {
 	border-color: var(--vscode-focusBorder);
 	color: var(--vscode-foreground);
