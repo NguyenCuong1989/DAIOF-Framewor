@@ -54,7 +54,6 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 	private readonly viewState: IViewPaneState;
 
 	private _restoringSession: Promise<void> | undefined;
-	private executionCanvas: HTMLElement | undefined;
 	private executionCanvasSession: HTMLElement | undefined;
 
 	constructor(
@@ -187,10 +186,9 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		}
 	}
 
-
 	private renderExecutionCanvas(parent: HTMLElement): void {
 		parent.classList.add('chat-view-pane', 'execution-canvas-enabled');
-		const canvas = this.executionCanvas = $('.chat-execution-canvas');
+		const canvas = $('.chat-execution-canvas');
 		canvas.setAttribute('role', 'region');
 		canvas.setAttribute('aria-label', 'GPT execution canvas');
 
