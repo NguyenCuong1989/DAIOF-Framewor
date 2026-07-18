@@ -62,7 +62,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		options: IViewPaneOptions,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
-		@IConfigurationService configurationService: IConfigurationService,
+		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -252,7 +252,9 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 	protected override async renderBody(parent: HTMLElement): Promise<void> {
 		super.renderBody(parent);
-		this.renderExecutionCanvas(parent);
+		if (this.configurationService.getValue<boolean>('chat.executionCanvas.enabled') !== false) {
+			this.renderExecutionCanvas(parent);
+		}
 
 		const welcomeController = this._register(this.instantiationService.createInstance(ChatViewWelcomeController, parent, this, this.chatOptions.location));
 		const scopedInstantiationService = this._register(this.instantiationService.createChild(new ServiceCollection([IContextKeyService, this.scopedContextKeyService])));
