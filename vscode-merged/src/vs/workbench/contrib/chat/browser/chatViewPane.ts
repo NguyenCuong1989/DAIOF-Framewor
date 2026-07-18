@@ -34,7 +34,7 @@ import { CHAT_PROVIDER_ID } from '../common/chatParticipantContribTypes.js';
 import { IChatService } from '../common/chatService.js';
 import { IChatSessionsExtensionPoint, IChatSessionsService, localChatSessionType } from '../common/chatSessionsService.js';
 import { LocalChatSessionUri } from '../common/chatUri.js';
-import { ChatAgentLocation, ChatModeKind } from '../common/constants.js';
+import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../common/constants.js';
 import { ChatWidget, IChatViewState } from './chatWidget.js';
 import { ChatViewWelcomeController, IViewWelcomeDelegate } from './viewsWelcome/chatViewWelcomeController.js';
 import './media/executionCanvas.css';
@@ -252,7 +252,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 	protected override async renderBody(parent: HTMLElement): Promise<void> {
 		super.renderBody(parent);
-		if (this.configurationService.getValue<boolean>('chat.executionCanvas.enabled') !== false) {
+		if (this.configurationService.getValue<boolean>(ChatConfiguration.ExecutionCanvasEnabled) !== false) {
 			this.renderExecutionCanvas(parent);
 		}
 
