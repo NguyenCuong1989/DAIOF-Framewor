@@ -354,6 +354,12 @@ configurationRegistry.registerConfiguration({
 			description: nls.localize('chat.emptyState.history.enabled', "Show recent chat history on the empty chat state."),
 			tags: ['preview']
 		},
+		[ChatConfiguration.ExecutionCanvasEnabled]: {
+			type: 'boolean',
+			default: true,
+			description: nls.localize('chat.executionCanvas.enabled', "Shows the execution lifecycle rail in the Chat view."),
+			tags: ['preview']
+		},
 		[ChatConfiguration.NotifyWindowOnResponseReceived]: {
 			type: 'boolean',
 			default: true,
