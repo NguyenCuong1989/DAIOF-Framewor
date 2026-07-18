@@ -40,6 +40,12 @@
 	color: var(--vscode-testing-iconPassed);
 }
 
+.chat-execution-canvas-stage.error {
+	border-color: var(--vscode-testing-iconFailed);
+	color: var(--vscode-testing-iconFailed);
+	background: var(--vscode-inputValidation-errorBackground);
+}
+
 .chat-execution-canvas-stage.active {
 	border-color: var(--vscode-focusBorder);
 	color: var(--vscode-foreground);
