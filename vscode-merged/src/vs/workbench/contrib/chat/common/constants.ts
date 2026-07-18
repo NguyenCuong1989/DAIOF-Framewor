@@ -27,6 +27,7 @@ export enum ChatConfiguration {
 	NotifyWindowOnResponseReceived = 'chat.notifyWindowOnResponseReceived',
 	SubagentToolCustomAgents = 'chat.customAgentInSubagent.enabled',
 	ShowCodeBlockProgressAnimation = 'chat.agent.codeBlockProgress',
+	ExecutionCanvasEnabled = 'chat.executionCanvas.enabled',
 }
 
 /**
