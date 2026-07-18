@@ -37,6 +37,7 @@ import { LocalChatSessionUri } from '../common/chatUri.js';
 import { ChatAgentLocation, ChatModeKind } from '../common/constants.js';
 import { ChatWidget, IChatViewState } from './chatWidget.js';
 import { ChatViewWelcomeController, IViewWelcomeDelegate } from './viewsWelcome/chatViewWelcomeController.js';
+import './media/executionCanvas.css';
 
 interface IViewPaneState extends IChatViewState {
 	sessionId?: string;
@@ -53,6 +54,8 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 	private readonly viewState: IViewPaneState;
 
 	private _restoringSession: Promise<void> | undefined;
+	private executionCanvas: HTMLElement | undefined;
+	private executionCanvasSession: HTMLElement | undefined;
 
 	constructor(
 		private readonly chatOptions: { location: ChatAgentLocation.Chat },
@@ -153,6 +156,10 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 		this.viewState.sessionId = model.sessionId;
 		this._widget.setModel(model, { ...this.viewState });
+		if (this.executionCanvasSession) {
+			this.executionCanvasSession.textContent = model.sessionId;
+			this.executionCanvasSession.title = model.sessionId;
+		}
 
 		// Update the toolbar context with new sessionId
 		this.updateActions();
@@ -180,8 +187,50 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		}
 	}
 
+
+	private renderExecutionCanvas(parent: HTMLElement): void {
+		parent.classList.add('chat-view-pane', 'execution-canvas-enabled');
+		const canvas = this.executionCanvas = $('.chat-execution-canvas');
+		canvas.setAttribute('role', 'region');
+		canvas.setAttribute('aria-label', 'GPT execution canvas');
+
+		const title = $('.chat-execution-canvas-title');
+		title.textContent = 'Execution';
+		canvas.appendChild(title);
+
+		const stages = $('.chat-execution-canvas-stages');
+		for (const [index, label] of ['Observe', 'Diagnose', 'Patch', 'Verify', 'Commit'].entries()) {
+			const stage = $('.chat-execution-canvas-stage');
+			stage.textContent = label;
+			if (index === 0) {
+				stage.classList.add('active');
+				stage.setAttribute('aria-current', 'step');
+			}
+			stages.appendChild(stage);
+		}
+		canvas.appendChild(stages);
+
+		this.executionCanvasSession = $('.chat-execution-canvas-session');
+		this.executionCanvasSession.textContent = 'No session';
+		canvas.appendChild(this.executionCanvasSession);
+
+		const toggle = $('.chat-execution-canvas-toggle');
+		toggle.textContent = '−';
+		toggle.title = 'Collapse execution canvas';
+		toggle.setAttribute('aria-label', 'Collapse execution canvas');
+		toggle.onclick = () => {
+			const collapsed = canvas.classList.toggle('collapsed');
+			toggle.textContent = collapsed ? '+' : '−';
+			toggle.title = collapsed ? 'Expand execution canvas' : 'Collapse execution canvas';
+			toggle.setAttribute('aria-label', toggle.title);
+		};
+		canvas.appendChild(toggle);
+		parent.prepend(canvas);
+	}
+
 	protected override async renderBody(parent: HTMLElement): Promise<void> {
 		super.renderBody(parent);
+		this.renderExecutionCanvas(parent);
 
 		const welcomeController = this._register(this.instantiationService.createInstance(ChatViewWelcomeController, parent, this, this.chatOptions.location));
 		const scopedInstantiationService = this._register(this.instantiationService.createChild(new ServiceCollection([IContextKeyService, this.scopedContextKeyService])));
