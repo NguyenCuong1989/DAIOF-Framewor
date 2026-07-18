@@ -55,6 +55,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 	private _restoringSession: Promise<void> | undefined;
 	private executionCanvasSession: HTMLElement | undefined;
+	private readonly executionCanvasStages: HTMLElement[] = [];
 
 	constructor(
 		private readonly chatOptions: { location: ChatAgentLocation.Chat },
@@ -155,6 +156,16 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 		this.viewState.sessionId = model.sessionId;
 		this._widget.setModel(model, { ...this.viewState });
+		this.updateExecutionCanvasStage(model.checkpoint ? 4 : model.requestInProgress ? 2 : model.getRequests().length ? 3 : 0);
+		this.modelDisposables.add(model.onDidChange(event => {
+			switch (event.kind) {
+				case 'addRequest': this.updateExecutionCanvasStage(0); break;
+				case 'changedRequest': this.updateExecutionCanvasStage(1); break;
+				case 'addResponse': this.updateExecutionCanvasStage(2); break;
+				case 'completedRequest': this.updateExecutionCanvasStage(3); break;
+				case 'setCheckpoint': this.updateExecutionCanvasStage(4); break;
+			}
+		}));
 		if (this.executionCanvasSession) {
 			this.executionCanvasSession.textContent = model.sessionId;
 			this.executionCanvasSession.title = model.sessionId;
@@ -186,6 +197,18 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		}
 	}
 
+	private updateExecutionCanvasStage(activeIndex: number): void {
+		for (const [index, stage] of this.executionCanvasStages.entries()) {
+			stage.classList.toggle('active', index === activeIndex);
+			stage.classList.toggle('complete', index < activeIndex);
+			if (index === activeIndex) {
+				stage.setAttribute('aria-current', 'step');
+			} else {
+				stage.removeAttribute('aria-current');
+			}
+		}
+	}
+
 	private renderExecutionCanvas(parent: HTMLElement): void {
 		parent.classList.add('chat-view-pane', 'execution-canvas-enabled');
 		const canvas = $('.chat-execution-canvas');
@@ -204,6 +227,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 				stage.classList.add('active');
 				stage.setAttribute('aria-current', 'step');
 			}
+			this.executionCanvasStages.push(stage);
 			stages.appendChild(stage);
 		}
 		canvas.appendChild(stages);
