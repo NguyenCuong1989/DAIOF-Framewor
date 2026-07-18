@@ -156,13 +156,15 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 
 		this.viewState.sessionId = model.sessionId;
 		this._widget.setModel(model, { ...this.viewState });
-		this.updateExecutionCanvasStage(model.checkpoint ? 4 : model.requestInProgress ? 2 : model.getRequests().length ? 3 : 0);
+		const lastRequest = model.getRequests().at(-1);
+		const lastResponseFailed = !!lastRequest?.response?.result?.errorDetails || !!lastRequest?.response?.isCanceled;
+		this.updateExecutionCanvasStage(model.checkpoint ? 4 : model.requestInProgress ? 2 : model.getRequests().length ? 3 : 0, lastResponseFailed);
 		this.modelDisposables.add(model.onDidChange(event => {
 			switch (event.kind) {
 				case 'addRequest': this.updateExecutionCanvasStage(0); break;
 				case 'changedRequest': this.updateExecutionCanvasStage(1); break;
 				case 'addResponse': this.updateExecutionCanvasStage(2); break;
-				case 'completedRequest': this.updateExecutionCanvasStage(3); break;
+				case 'completedRequest': this.updateExecutionCanvasStage(3, !!event.request.response?.result?.errorDetails || !!event.request.response?.isCanceled); break;
 				case 'setCheckpoint': this.updateExecutionCanvasStage(4); break;
 			}
 		}));
@@ -197,10 +199,12 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		}
 	}
 
-	private updateExecutionCanvasStage(activeIndex: number): void {
+	private updateExecutionCanvasStage(activeIndex: number, failed = false): void {
 		for (const [index, stage] of this.executionCanvasStages.entries()) {
 			stage.classList.toggle('active', index === activeIndex);
-			stage.classList.toggle('complete', index < activeIndex);
+			stage.classList.toggle('complete', index < activeIndex && !failed);
+			stage.classList.toggle('error', index === activeIndex && failed);
+			stage.title = index === activeIndex && failed ? `${stage.textContent}: failed or canceled` : '';
 			if (index === activeIndex) {
 				stage.setAttribute('aria-current', 'step');
 			} else {
@@ -214,6 +218,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		const canvas = $('.chat-execution-canvas');
 		canvas.setAttribute('role', 'region');
 		canvas.setAttribute('aria-label', 'GPT execution canvas');
+		canvas.setAttribute('aria-live', 'polite');
 
 		const title = $('.chat-execution-canvas-title');
 		title.textContent = 'Execution';
