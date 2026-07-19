@@ -65,6 +65,7 @@ create table execution.approvals (
   requested_at timestamptz not null default now(),
   decided_at timestamptz,
   expires_at timestamptz,
+  unique (id, run_id),
   constraint approvals_decision_time check (
     (decision = 'pending' and decided_at is null)
     or (decision <> 'pending' and decided_at is not null)
@@ -86,7 +87,7 @@ create table execution.events (
 create table execution.connector_invocations (
   id uuid primary key default gen_random_uuid(),
   run_id uuid not null references execution.runs(id) on delete cascade,
-  approval_id uuid references execution.approvals(id) on delete set null,
+  approval_id uuid,
   connector_key text not null check (char_length(connector_key) between 1 and 160),
   operation text not null check (char_length(operation) between 1 and 160),
   status text not null default 'queued'
@@ -99,7 +100,11 @@ create table execution.connector_invocations (
   metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
   constraint connector_invocations_time_order check (
     completed_at is null or (started_at is not null and completed_at >= started_at)
-  )
+  ),
+  constraint connector_invocations_approval_same_run
+    foreign key (approval_id, run_id)
+    references execution.approvals (id, run_id)
+    on delete restrict
 );
 
 create table execution.artifacts (
@@ -111,6 +116,7 @@ create table execution.artifacts (
   size_bytes bigint check (size_bytes is null or size_bytes >= 0),
   metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
   created_at timestamptz not null default now(),
+  unique (id, run_id),
   unique (run_id, sha256)
 );
 
@@ -119,9 +125,13 @@ create table execution.checkpoints (
   run_id uuid not null references execution.runs(id) on delete cascade,
   commit_sha text not null check (commit_sha ~ '^[0-9a-f]{7,64}$'),
   rollback_ref text check (rollback_ref is null or char_length(rollback_ref) <= 320),
-  artifact_id uuid references execution.artifacts(id) on delete set null,
+  artifact_id uuid,
   created_at timestamptz not null default now(),
-  unique (run_id, commit_sha)
+  unique (run_id, commit_sha),
+  constraint checkpoints_artifact_same_run
+    foreign key (artifact_id, run_id)
+    references execution.artifacts (id, run_id)
+    on delete restrict
 );
 
 create index sessions_workspace_created_idx
