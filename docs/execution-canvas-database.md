@@ -2,7 +2,7 @@
 
 ## Decision
 
-Use PostgreSQL/Supabase as an optional server-side audit/control-plane store. Keep VS Code's existing local session persistence authoritative for native UX until the database adapter is implemented and verified. The frontend must not connect directly to these tables.
+Use PostgreSQL/Supabase as the server-side audit/control-plane store. Keep VS Code's existing local session persistence authoritative for native UX until the database adapter is implemented and verified. The frontend must not connect directly to these tables.
 
 ## Entities
 
@@ -42,14 +42,14 @@ erDiagram
 
 ## Rollout gates
 
-1. Apply only to a Supabase development branch or local database.
-2. Run migration and verify all constraints, grants, RLS state, and append-only trigger.
-3. Run Supabase security and performance advisors.
-4. Generate TypeScript types and implement a backend-only adapter.
-5. Dual-write behind a disabled-by-default feature flag; local persistence remains source of truth.
-6. Compare event counts, sequence continuity, digests, and checkpoint recovery.
-7. Enable read path only after parity and failure-injection tests pass.
-8. Production migration requires backup, rollback rehearsal, and retention policy.
+1. Database restored and existing security-definer ACL hardened — PASS.
+2. Execution schema migration applied — PASS.
+3. Foreign-key index migration applied — PASS.
+4. Security advisor has no WARN findings; remaining RLS INFO entries are intentional for server-only tables.
+5. Performance advisor has no unindexed foreign keys; unused-index INFO is expected at zero rows.
+6. Implement a backend-only adapter behind a disabled-by-default feature flag.
+7. Dual-write while local VS Code persistence remains source of truth.
+8. Enable read path only after parity, failure-injection, backup, and rollback tests pass.
 
 ## Verification SQL
 
@@ -79,3 +79,12 @@ Expected: every table has `rowsecurity = true`; browser roles have zero table gr
 - Notion: decisions, rollout gates, and evidence links only.
 - Airtable: no operational copy; connector returned no bases and duplicating canonical state would create drift.
 - DataCamp: reference/training material only, never runtime data.
+
+
+## Applied Supabase ledger
+
+- `20260719070032_harden_rls_auto_enable_acl.sql`
+- `20260719070132_execution_canvas_audit.sql`
+- `20260719070252_execution_canvas_fk_indexes.sql`
+
+Project: `copilot-home` (`gygifxftugictakgmxgs`), PostgreSQL 17, region `ap-northeast-2`.
