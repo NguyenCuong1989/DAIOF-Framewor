@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
+import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
@@ -14,6 +14,7 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../platfo
 import { ChatConfiguration } from './constants.js';
 
 const OUTBOX_STORAGE_KEY = 'chat.executionCanvas.audit.outbox';
+const SEQUENCE_STORAGE_KEY = 'chat.executionCanvas.audit.sequence';
 const OUTBOX_LIMIT = 512;
 const BATCH_LIMIT = 32;
 
@@ -54,6 +55,7 @@ export class ExecutionCanvasAuditService extends Disposable implements IExecutio
 	) {
 		super();
 		this.outbox = this.loadOutbox();
+		this.loadSequences();
 		for (const event of this.outbox) {
 			this.nextSequence.set(event.sessionId, Math.max(this.nextSequence.get(event.sessionId) ?? 0, event.sequenceNo + 1));
 		}
@@ -69,6 +71,7 @@ export class ExecutionCanvasAuditService extends Disposable implements IExecutio
 
 		const sequenceNo = this.nextSequence.get(event.sessionId) ?? 0;
 		this.nextSequence.set(event.sessionId, sequenceNo + 1);
+		this.persistSequences();
 		this.outbox.push({
 			...event,
 			id: generateUuid(),
@@ -89,20 +92,22 @@ export class ExecutionCanvasAuditService extends Disposable implements IExecutio
 		}
 
 		const endpoint = this.configurationService.getValue<string>(ChatConfiguration.ExecutionCanvasAuditEndpoint);
-		if (!endpoint?.startsWith('http://127.0.0.1:') && !endpoint?.startsWith('http://localhost:')) {
+		if (!endpoint || !/^http:\/\/(?:127\.0\.0\.1|localhost):(?:[1-9][0-9]{0,4})(?:\/|$)/.test(endpoint)) {
 			this.logService.warn('ExecutionCanvasAuditService: refusing non-loopback endpoint');
 			return;
 		}
 
 		this.flushing = true;
 		const batch = this.outbox.slice(0, BATCH_LIMIT);
+		const cancellation = new CancellationTokenSource();
+		const timeoutHandle = setTimeout(() => cancellation.cancel(), 2000);
 		try {
 			const context = await this.requestService.request({
 				url: endpoint,
 				type: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				data: JSON.stringify({ version: 1, events: batch }),
-			}, CancellationToken.None);
+			}, cancellation.token);
 			if (!isSuccess(context)) {
 				this.logService.warn(`ExecutionCanvasAuditService: backend returned ${context.res.statusCode}`);
 				return;
@@ -117,6 +122,8 @@ export class ExecutionCanvasAuditService extends Disposable implements IExecutio
 		} catch (error) {
 			this.logService.warn('ExecutionCanvasAuditService: delivery deferred', error);
 		} finally {
+			clearTimeout(timeoutHandle);
+			cancellation.dispose();
 			this.flushing = false;
 		}
 	}
@@ -133,6 +140,29 @@ export class ExecutionCanvasAuditService extends Disposable implements IExecutio
 			this.logService.warn('ExecutionCanvasAuditService: invalid persisted outbox was discarded');
 			return [];
 		}
+	}
+
+	private loadSequences(): void {
+		try {
+			const value = JSON.parse(this.storageService.get(SEQUENCE_STORAGE_KEY, StorageScope.WORKSPACE, '{}')) as Record<string, unknown>;
+			for (const [sessionId, sequence] of Object.entries(value)) {
+				if (typeof sequence === 'number' && Number.isSafeInteger(sequence) && sequence >= 0) {
+					this.nextSequence.set(sessionId, sequence);
+				}
+			}
+		} catch {
+			this.logService.warn('ExecutionCanvasAuditService: invalid sequence state was discarded');
+		}
+	}
+
+	private persistSequences(): void {
+		const entries = Array.from(this.nextSequence.entries()).slice(-128);
+		this.storageService.store(
+			SEQUENCE_STORAGE_KEY,
+			JSON.stringify(Object.fromEntries(entries)),
+			StorageScope.WORKSPACE,
+			StorageTarget.MACHINE,
+		);
 	}
 
 	private persist(): void {
