@@ -47,9 +47,10 @@ erDiagram
 3. Foreign-key index migration applied — PASS.
 4. Security advisor has no WARN findings; remaining RLS INFO entries are intentional for server-only tables.
 5. Performance advisor has no unindexed foreign keys; unused-index INFO is expected at zero rows.
-6. Implement a backend-only adapter behind a disabled-by-default feature flag.
-7. Dual-write while local VS Code persistence remains source of truth.
-8. Enable read path only after parity, failure-injection, backup, and rollback tests pass.
+6. Native durable outbox and loopback-only HyperAI transport implemented behind a disabled-by-default feature flag — SOURCE PASS, NATIVE BUILD NOT RUN.
+7. Implement and contract-test the HyperAI API ingestion endpoint; see `docs/execution-canvas-hyperai-adapter.md`.
+8. Dual-write while local VS Code persistence remains source of truth.
+9. Enable read path only after parity, failure-injection, backup, and rollback tests pass.
 
 ## Verification SQL
 
