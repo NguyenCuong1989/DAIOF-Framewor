@@ -39,6 +39,7 @@ import { IChatLayoutService } from '../common/chatLayoutService.js';
 import { ChatModeService, IChatModeService } from '../common/chatModes.js';
 import { ChatResponseResourceFileSystemProvider } from '../common/chatResponseResourceFileSystemProvider.js';
 import { IChatService } from '../common/chatService.js';
+import { ExecutionCanvasAuditService, IExecutionCanvasAuditService } from '../common/executionCanvasAuditService.js';
 import { ChatService } from '../common/chatServiceImpl.js';
 import { IChatSessionsService } from '../common/chatSessionsService.js';
 import { ChatSlashCommandService, IChatSlashCommandService } from '../common/chatSlashCommands.js';
@@ -359,6 +360,18 @@ configurationRegistry.registerConfiguration({
 			default: true,
 			description: nls.localize('chat.executionCanvas.enabled', "Shows the execution lifecycle rail in the Chat view."),
 			tags: ['preview']
+		},
+		[ChatConfiguration.ExecutionCanvasAuditEnabled]: {
+			type: 'boolean',
+			default: false,
+			description: nls.localize('chat.executionCanvas.audit.enabled', "Queues sanitized execution lifecycle events for delivery to the local HyperAI audit backend."),
+			tags: ['experimental']
+		},
+		[ChatConfiguration.ExecutionCanvasAuditEndpoint]: {
+			type: 'string',
+			default: 'http://127.0.0.1:9001/api/v1/execution-canvas/events',
+			description: nls.localize('chat.executionCanvas.audit.endpoint', "Loopback-only HyperAI endpoint for Execution Canvas audit batches."),
+			tags: ['experimental']
 		},
 		[ChatConfiguration.NotifyWindowOnResponseReceived]: {
 			type: 'boolean',
@@ -1064,6 +1077,7 @@ registerEditorFeature(ChatPasteProvidersFeature);
 
 registerSingleton(IChatTransferService, ChatTransferService, InstantiationType.Delayed);
 registerSingleton(IChatService, ChatService, InstantiationType.Delayed);
+registerSingleton(IExecutionCanvasAuditService, ExecutionCanvasAuditService, InstantiationType.Delayed);
 registerSingleton(IChatWidgetService, ChatWidgetService, InstantiationType.Delayed);
 registerSingleton(IQuickChatService, QuickChatService, InstantiationType.Delayed);
 registerSingleton(IChatAccessibilityService, ChatAccessibilityService, InstantiationType.Delayed);
