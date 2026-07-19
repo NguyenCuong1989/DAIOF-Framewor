@@ -28,6 +28,8 @@ export enum ChatConfiguration {
 	SubagentToolCustomAgents = 'chat.customAgentInSubagent.enabled',
 	ShowCodeBlockProgressAnimation = 'chat.agent.codeBlockProgress',
 	ExecutionCanvasEnabled = 'chat.executionCanvas.enabled',
+	ExecutionCanvasAuditEnabled = 'chat.executionCanvas.audit.enabled',
+	ExecutionCanvasAuditEndpoint = 'chat.executionCanvas.audit.endpoint',
 }
 
 /**
