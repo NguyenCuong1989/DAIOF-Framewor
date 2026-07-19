@@ -32,6 +32,7 @@ import { ChatContextKeys } from '../common/chatContextKeys.js';
 import { IChatModel } from '../common/chatModel.js';
 import { CHAT_PROVIDER_ID } from '../common/chatParticipantContribTypes.js';
 import { IChatService } from '../common/chatService.js';
+import { IExecutionCanvasAuditService } from '../common/executionCanvasAuditService.js';
 import { IChatSessionsExtensionPoint, IChatSessionsService, localChatSessionType } from '../common/chatSessionsService.js';
 import { LocalChatSessionUri } from '../common/chatUri.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../common/constants.js';
@@ -63,6 +64,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IExecutionCanvasAuditService private readonly executionCanvasAuditService: IExecutionCanvasAuditService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -161,11 +163,35 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 		this.updateExecutionCanvasStage(model.checkpoint ? 4 : model.requestInProgress ? 2 : model.getRequests().length ? 3 : 0, lastResponseFailed);
 		this.modelDisposables.add(model.onDidChange(event => {
 			switch (event.kind) {
-				case 'addRequest': this.updateExecutionCanvasStage(0); break;
-				case 'changedRequest': this.updateExecutionCanvasStage(1); break;
-				case 'addResponse': this.updateExecutionCanvasStage(2); break;
-				case 'completedRequest': this.updateExecutionCanvasStage(3, !!event.request.response?.result?.errorDetails || !!event.request.response?.isCanceled); break;
-				case 'setCheckpoint': this.updateExecutionCanvasStage(4); break;
+				case 'addRequest':
+					this.updateExecutionCanvasStage(0);
+					this.executionCanvasAuditService.record({ sessionId: model.sessionId, stage: 'observe', eventKind: event.kind, status: 'running', payload: {} });
+					break;
+				case 'changedRequest':
+					this.updateExecutionCanvasStage(1);
+					this.executionCanvasAuditService.record({ sessionId: model.sessionId, stage: 'diagnose', eventKind: event.kind, status: 'running', payload: {} });
+					break;
+				case 'addResponse':
+					this.updateExecutionCanvasStage(2);
+					this.executionCanvasAuditService.record({ sessionId: model.sessionId, stage: 'patch', eventKind: event.kind, status: 'running', payload: {} });
+					break;
+				case 'completedRequest': {
+					const failed = !!event.request.response?.result?.errorDetails;
+					const canceled = !!event.request.response?.isCanceled;
+					this.updateExecutionCanvasStage(3, failed || canceled);
+					this.executionCanvasAuditService.record({
+						sessionId: model.sessionId,
+						stage: 'verify',
+						eventKind: event.kind,
+						status: canceled ? 'canceled' : failed ? 'failed' : 'passed',
+						payload: { failed, canceled },
+					});
+					break;
+				}
+				case 'setCheckpoint':
+					this.updateExecutionCanvasStage(4);
+					this.executionCanvasAuditService.record({ sessionId: model.sessionId, stage: 'commit', eventKind: event.kind, status: 'passed', payload: {} });
+					break;
 			}
 		}));
 		if (this.executionCanvasSession) {
