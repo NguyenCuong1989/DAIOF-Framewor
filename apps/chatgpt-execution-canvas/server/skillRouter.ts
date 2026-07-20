@@ -1,9 +1,12 @@
 import { z } from 'zod';
 
 export const missionSchema = z.enum([
+  'chat',
   'design',
-  'build',
-  'verify',
+  'research',
+  'code',
+  'debug',
+  'test',
   'deploy',
   'observe',
   'document',
@@ -20,14 +23,17 @@ export interface SkillDescriptor {
 }
 
 const catalog: readonly SkillDescriptor[] = [
-  { id: 'find-skills', missions: ['design', 'build', 'verify', 'deploy', 'observe', 'document'], mutating: false, approval: 'never' },
-  { id: 'mcp-builder', missions: ['build', 'verify'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
+  { id: 'find-skills', missions: ['chat', 'design', 'research', 'code', 'debug', 'test', 'deploy', 'observe', 'document'], mutating: false, approval: 'never' },
+  { id: 'firecrawl', missions: ['research', 'debug'], mutating: false, approval: 'never', requires: ['find-skills'] },
+  { id: 'mcp-builder', missions: ['code', 'debug', 'test'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
+  { id: 'mcp-cli', missions: ['debug', 'test'], mutating: false, approval: 'never', requires: ['mcp-builder'] },
   { id: 'canvas-design', missions: ['design'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
   { id: 'brand-guidelines', missions: ['design'], mutating: true, approval: 'before-write', requires: ['canvas-design'] },
   { id: 'mermaid-diagrams', missions: ['design', 'document'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
-  { id: 'session-logs', missions: ['verify', 'observe'], mutating: false, approval: 'never', requires: ['find-skills'] },
-  { id: 'sentry-cli', missions: ['verify', 'observe'], mutating: false, approval: 'never', requires: ['session-logs'] },
-  { id: 'deploy-to-vercel', missions: ['deploy'], mutating: true, approval: 'before-external-effect', requires: ['mcp-builder', 'session-logs'] },
+  { id: 'webapp-testing', missions: ['test', 'debug'], mutating: false, approval: 'never', requires: ['mcp-cli'] },
+  { id: 'session-logs', missions: ['debug', 'test', 'observe'], mutating: false, approval: 'never', requires: ['find-skills'] },
+  { id: 'sentry-cli', missions: ['debug', 'observe'], mutating: false, approval: 'never', requires: ['session-logs'] },
+  { id: 'deploy-to-vercel', missions: ['deploy'], mutating: true, approval: 'before-external-effect', requires: ['mcp-builder', 'webapp-testing', 'session-logs'] },
   { id: 'doc-coauthoring', missions: ['document'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
 ];
 
