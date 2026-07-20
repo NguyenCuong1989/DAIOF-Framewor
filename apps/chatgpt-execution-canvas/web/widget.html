@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GPT Execution Canvas</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --bg:#101114; --panel:#191b20; --line:#30343d; --muted:#9ca3af; --text:#f3f4f6; --blue:#4f8cff; --green:#4cc38a; --amber:#f2b94b; --red:#ef6a6a; }
+    * { box-sizing:border-box } body { margin:0; color:var(--text); background:var(--bg) }
+    .shell { padding:14px; display:grid; gap:12px }
+    header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start }
+    h1 { font-size:16px; margin:0 0 4px } .sub { color:var(--muted); font-size:12px }
+    .badge { border:1px solid var(--line); border-radius:999px; padding:5px 9px; font-size:11px }
+    .stages { display:grid; grid-template-columns:repeat(5,1fr); gap:6px }
+    .stage { border:1px solid var(--line); border-radius:8px; padding:8px; min-width:0 }
+    .stage b { display:block; font-size:12px } .stage small { color:var(--muted) }
+    .stage.done { border-color:var(--green) } .stage.active { border-color:var(--blue); background:color-mix(in srgb,var(--blue) 12%,transparent) }
+    .panel { border:1px solid var(--line); background:var(--panel); border-radius:10px; overflow:hidden }
+    .row { display:grid; grid-template-columns:130px 1fr; gap:12px; padding:9px 12px; border-bottom:1px solid var(--line); font-size:12px }
+    .row:last-child { border-bottom:0 }.row span:first-child { color:var(--muted) }
+    .approval { padding:12px; display:grid; gap:10px }.approval.pending { border-left:3px solid var(--amber) }.approval.approved { border-left:3px solid var(--green) }.approval.rejected { border-left:3px solid var(--red) }
+    .actions { display:flex; gap:8px; flex-wrap:wrap } button { border:1px solid var(--line); border-radius:7px; padding:8px 11px; background:#242832; color:var(--text); cursor:pointer } button.primary { background:var(--blue); border-color:var(--blue) } button.danger { border-color:var(--red) } button:disabled { opacity:.45; cursor:not-allowed }
+    .events { max-height:220px; overflow:auto }.event { display:grid; grid-template-columns:34px 74px 1fr 75px; gap:8px; padding:7px 10px; border-top:1px solid var(--line); font:11px ui-monospace,SFMono-Regular,Menlo,monospace }.event:first-child { border-top:0 }.event .passed { color:var(--green) }.event .failed { color:var(--red) }
+    .empty { padding:16px; color:var(--muted); text-align:center }
+  </style>
+</head>
+<body>
+<div id="app" class="shell"></div>
+<script>
+  const STAGES = ['observe','diagnose','patch','verify','commit'];
+  let state = { run:null, events:[], approval:null, busy:false, error:null };
+  const app = document.getElementById('app');
+
+  function mergeResult(result) {
+    const data = result?.structuredContent || {};
+    const meta = result?._meta || {};
+    state = {
+      ...state,
+      run: data.run || meta.run || state.run,
+      events: data.events || meta.events || state.events,
+      approval: data.approval || meta.approval || state.approval,
+      busy:false,
+      error:null,
+    };
+    render();
+  }
+
+  async function decide(decision) {
+    if (!state.approval?.id || !window.openai?.callTool) return;
+    state.busy = true; state.error = null; render();
+    try {
+      const result = await window.openai.callTool('decide_execution_approval', {
+        approvalId: state.approval.id,
+        decision,
+      });
+      mergeResult(result);
+      window.openai?.sendFollowUpMessage?.({
+        prompt: decision === 'approved'
+          ? 'Approval recorded. Continue only within the displayed scope and return verification evidence before commit.'
+          : 'Approval rejected. Stop this execution path and explain what remains unchanged.'
+      });
+    } catch (error) {
+      state.busy = false; state.error = String(error?.message || error); render();
+    }
+  }
+
+  function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function render() {
+    const run = state.run;
+    if (!run) { app.innerHTML = '<div class="empty">No execution run loaded.</div>'; return; }
+    const active = Math.max(0, STAGES.indexOf(run.current_stage));
+    const approval = state.approval;
+    const scope = approval?.scope || {};
+    app.innerHTML = `
+      <header>
+        <div><h1>GPT Execution Canvas</h1><div class="sub">Run ${esc(run.id)} · explicit approval · append-only audit</div></div>
+        <div class="badge">${esc(run.status)} · ${esc(run.current_stage)}</div>
+      </header>
+      <section class="stages">
+        ${STAGES.map((stage,i)=>`<div class="stage ${i<active?'done':i===active?'active':''}"><b>${esc(stage)}</b><small>${i<active?'complete':i===active?'active':'pending'}</small></div>`).join('')}
+      </section>
+      <section class="panel">
+        <div class="row"><span>Target node</span><b>${esc(run.target_node || 'unassigned')}</b></div>
+        <div class="row"><span>Repository</span><code>${esc(run.repository || 'not linked')}</code></div>
+        <div class="row"><span>Git reference</span><code>${esc(run.git_ref || 'not linked')}</code></div>
+        <div class="row"><span>Commit</span><code>${esc(run.commit_sha || 'not committed')}</code></div>
+      </section>
+      ${approval ? `<section class="panel approval ${esc(approval.decision)}">
+        <div><b>Human approval gate</b><div class="sub">${esc(scope.summary || scope.action || 'Scoped execution decision')}</div></div>
+        <div class="row"><span>Action</span><b>${esc(scope.action || '')}</b></div>
+        <div class="row"><span>Target</span><code>${esc(scope.target || '')}</code></div>
+        <div class="row"><span>Risk</span><b>${esc(scope.risk || 'unknown')}</b></div>
+        <div class="actions">
+          <button class="primary" ${approval.decision!=='pending'||state.busy?'disabled':''} onclick="decide('approved')">Approve</button>
+          <button class="danger" ${approval.decision!=='pending'||state.busy?'disabled':''} onclick="decide('rejected')">Reject</button>
+          <span class="sub">Decision: ${esc(approval.decision)}</span>
+        </div>
+        ${state.error?`<div style="color:var(--red)">${esc(state.error)}</div>`:''}
+      </section>` : ''}
+      <section class="panel events">
+        ${(state.events||[]).length ? state.events.map(event=>`<div class="event"><span>#${esc(event.sequence_no)}</span><span>${esc(event.stage)}</span><span>${esc(event.event_kind)}</span><span class="${esc(event.status)}">${esc(event.status)}</span></div>`).join('') : '<div class="empty">No lifecycle events yet.</div>'}
+      </section>`;
+  }
+
+  window.decide = decide;
+  mergeResult({ structuredContent: window.openai?.toolOutput || {}, _meta: window.openai?.toolResponseMetadata || {} });
+  window.addEventListener('openai:set_globals', event => {
+    mergeResult({
+      structuredContent: event.detail?.globals?.toolOutput || window.openai?.toolOutput || {},
+      _meta: event.detail?.globals?.toolResponseMetadata || window.openai?.toolResponseMetadata || {},
+    });
+  }, { passive:true });
+</script>
+</body>
+</html>
