@@ -1,0 +1,35 @@
+name: ChatGPT Execution Canvas
+
+on:
+  pull_request:
+    paths:
+      - 'apps/chatgpt-execution-canvas/**'
+      - '.github/workflows/chatgpt-execution-canvas.yml'
+  push:
+    branches:
+      - codex/chatgpt-execution-canvas-production
+    paths:
+      - 'apps/chatgpt-execution-canvas/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: execution-canvas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/chatgpt-execution-canvas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/chatgpt-execution-canvas/package-lock.json
+      - run: npm ci
+      - run: npm run check
