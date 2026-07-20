@@ -1,0 +1,61 @@
+name: ChatGPT Execution Canvas
+
+on:
+  pull_request:
+    paths:
+      - 'apps/chatgpt-execution-canvas/**'
+      - '.github/workflows/chatgpt-execution-canvas.yml'
+  push:
+    branches:
+      - codex/chatgpt-execution-canvas-production
+    paths:
+      - 'apps/chatgpt-execution-canvas/**'
+      - '.github/workflows/chatgpt-execution-canvas.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: execution-canvas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/chatgpt-execution-canvas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund --loglevel=error
+      - name: Run all gates
+        id: gates
+        shell: bash
+        run: |
+          set +e
+          : > validation.log
+          run_gate() {
+            name="$1"; shift
+            printf '\n===== %s =====\n' "$name" | tee -a validation.log
+            "$@" 2>&1 | tee -a validation.log
+            code=${PIPESTATUS[0]}
+            printf 'GATE_%s_EXIT=%s\n' "$name" "$code" | tee -a validation.log
+            return "$code"
+          }
+          status=0
+          run_gate TYPECHECK npm run typecheck || status=1
+          run_gate TEST npm run test || status=1
+          run_gate CONTRACT npm run validate:contract || status=1
+          run_gate BUILD npm run build || status=1
+          exit "$status"
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-canvas-validation
+          path: apps/chatgpt-execution-canvas/validation.log
+          if-no-files-found: error
