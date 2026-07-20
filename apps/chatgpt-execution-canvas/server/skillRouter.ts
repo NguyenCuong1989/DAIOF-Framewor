@@ -19,7 +19,7 @@ export interface SkillDescriptor {
   readonly requires?: readonly string[];
 }
 
-const catalog = [
+const catalog: readonly SkillDescriptor[] = [
   { id: 'find-skills', missions: ['design', 'build', 'verify', 'deploy', 'observe', 'document'], mutating: false, approval: 'never' },
   { id: 'mcp-builder', missions: ['build', 'verify'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
   { id: 'canvas-design', missions: ['design'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
@@ -29,9 +29,9 @@ const catalog = [
   { id: 'sentry-cli', missions: ['verify', 'observe'], mutating: false, approval: 'never', requires: ['session-logs'] },
   { id: 'deploy-to-vercel', missions: ['deploy'], mutating: true, approval: 'before-external-effect', requires: ['mcp-builder', 'session-logs'] },
   { id: 'doc-coauthoring', missions: ['document'], mutating: true, approval: 'before-write', requires: ['find-skills'] },
-] as const satisfies readonly SkillDescriptor[];
+];
 
-const byId = new Map(catalog.map(skill => [skill.id, skill]));
+const byId = new Map<string, SkillDescriptor>(catalog.map(skill => [skill.id, skill]));
 
 function addWithDependencies(id: string, output: SkillDescriptor[], seen: Set<string>): void {
   if (seen.has(id)) return;
@@ -43,7 +43,7 @@ function addWithDependencies(id: string, output: SkillDescriptor[], seen: Set<st
 }
 
 export function routeSkillChain(mission: Mission): SkillDescriptor[] {
-  const selected = catalog.filter(skill => skill.missions.includes(mission));
+  const selected = catalog.filter(skill => skill.missions.some(candidate => candidate === mission));
   const output: SkillDescriptor[] = [];
   const seen = new Set<string>();
   for (const skill of selected) addWithDependencies(skill.id, output, seen);
