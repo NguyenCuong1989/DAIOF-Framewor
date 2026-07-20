@@ -9,14 +9,14 @@ export interface AgentMissionPlan {
 }
 
 const patterns: Array<[Mission, RegExp]> = [
-  ['deploy', /\b(deploy|publish|release|production|vercel)\b/i],
-  ['test', /\b(test|verify|qa|e2e|playwright|inspector)\b/i],
-  ['debug', /\b(debug|fix|error|failed|failure|log|diagnos)\w*\b/i],
-  ['code', /\b(code|implement|build|refactor|patch|feature|api|mcp|server|repository)\b/i],
-  ['design', /\b(design|ui|ux|layout|brand|canvas|visual)\b/i],
-  ['research', /\b(research|search|docs|documentation|lookup|crawl)\b/i],
-  ['observe', /\b(observe|monitor|metrics|telemetry|sentry|health)\b/i],
-  ['document', /\b(document|readme|spec|proposal|architecture)\b/i],
+  ['deploy', /\b(deploy\w*|publish\w*|release\w*|production|vercel)\b/i],
+  ['test', /\b(test\w*|verify\w*|qa|e2e|playwright|inspector)\b/i],
+  ['debug', /\b(debug\w*|fix\w*|error\w*|failed|failure|log\w*|diagnos\w*)\b/i],
+  ['code', /\b(code|implement\w*|build\w*|refactor\w*|patch\w*|feature\w*|api|mcp|server|repository)\b/i],
+  ['design', /\b(design\w*|ui|ux|layout\w*|brand\w*|canvas|visual\w*)\b/i],
+  ['research', /\b(research\w*|search\w*|docs|documentation|lookup\w*|crawl\w*)\b/i],
+  ['observe', /\b(observe\w*|monitor\w*|metrics|telemetry|sentry|health)\b/i],
+  ['document', /\b(document\w*|readme|spec\w*|proposal\w*|architecture)\b/i],
 ];
 
 export function inferMission(message: string): Mission {
