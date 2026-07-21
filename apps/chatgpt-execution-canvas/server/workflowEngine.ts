@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { capabilitiesForMission } from './capabilityRegistry.js';
-import { planAgentMission } from './missionRouter.js';
+import { planAgentMission } from './agent.js';
 
 export type WorkflowStage = 'understand' | 'discover' | 'plan' | 'execute' | 'verify' | 'recover' | 'finalize';
 
