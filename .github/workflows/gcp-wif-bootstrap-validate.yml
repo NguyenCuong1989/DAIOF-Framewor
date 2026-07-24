@@ -34,7 +34,8 @@ jobs:
           assert 'create long-lived service-account keys' in x['forbidden_operations']
           PY
           grep -Fq 'roles/iam.workloadIdentityUser' "$SCRIPT"
-          grep -Fq "assertion.repository == 'NguyenCuong1989/DAIOF-Framewor'" "$SCRIPT"
+          grep -Fq 'GITHUB_REPOSITORY="NguyenCuong1989/DAIOF-Framewor"' "$SCRIPT"
+          grep -Fq 'EXPECTED_CONDITION="assertion.repository ==' "$SCRIPT"
           grep -Fq 'gh run rerun' "$SCRIPT"
 
       - name: Confirm keyless-only boundary
