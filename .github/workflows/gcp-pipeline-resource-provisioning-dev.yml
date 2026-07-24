@@ -104,7 +104,7 @@ jobs:
           python3 - "$TOOL_ROOT/workflow-evidence/auth-preflight.json" "$mode" <<'PY'
           import datetime,json,pathlib,sys
           pathlib.Path(sys.argv[1]).write_text(json.dumps({
-            'schema':'APO.GCP.AUTH.PREFLIGHT.v1','auth_mode':sys.argv[2],
+            'schema':'APO.GCP.AUTH.PREFLIGHT.v2','auth_mode':sys.argv[2],
             'secrets_disclosed':False,
             'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
           },indent=2),encoding='utf-8')
@@ -113,7 +113,7 @@ jobs:
 
       - name: Authenticate with Workload Identity Federation
         if: steps.auth.outputs.mode == 'wif'
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
@@ -121,33 +121,34 @@ jobs:
 
       - name: Authenticate with service-account JSON fallback
         if: steps.auth.outputs.mode == 'json'
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ env.GCP_CREDENTIALS_JSON }}
           project_id: ${{ env.INPUT_PROJECT_ID }}
 
       - name: Install Google Cloud CLI
         if: steps.auth.outputs.mode != 'none'
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.INPUT_PROJECT_ID }}
 
       - name: Record missing-auth blocker
         if: steps.auth.outputs.mode == 'none'
+        id: blocker
         shell: bash
         run: |
           set -Eeuo pipefail
           python3 - "$TOOL_ROOT/workflow-evidence/blocker.json" <<'PY'
           import datetime,json,pathlib,sys
           pathlib.Path(sys.argv[1]).write_text(json.dumps({
-            'schema':'APO.GCP.EXECUTION.BLOCKER.v1','status':'BLOCKED',
+            'schema':'APO.GCP.EXECUTION.BLOCKER.v2','status':'BLOCKED',
             'reason':'NO_GCP_AUTH_ROUTE',
             'accepted_routes':['vars.GCP_WIF_PROVIDER + vars.GCP_SERVICE_ACCOUNT','secrets.GCP_CREDENTIALS_JSON'],
             'technical_mutation_performed':False,
             'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
           },indent=2),encoding='utf-8')
           PY
-          exit 67
+          echo status=BLOCKED >> "$GITHUB_OUTPUT"
 
       - name: Attest GCP identity
         if: steps.auth.outputs.mode != 'none'
@@ -168,6 +169,7 @@ jobs:
 
       - name: Execute full provisioning skill
         if: steps.auth.outputs.mode != 'none'
+        id: execute
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -177,6 +179,7 @@ jobs:
           [[ -z "$INPUT_COMPOSER_ENVIRONMENT" ]] || args+=(--composer-environment "$INPUT_COMPOSER_ENVIRONMENT")
           [[ -z "$INPUT_ARTIFACT_BUCKET" ]] || args+=(--artifact-bucket "$INPUT_ARTIFACT_BUCKET")
           "$TOOL_ROOT/run_skill.sh" "${args[@]}"
+          echo status=PASS >> "$GITHUB_OUTPUT"
 
       - name: Build workflow evidence manifest
         if: always()
@@ -187,7 +190,7 @@ jobs:
           python3 - "$TOOL_ROOT/workflow-evidence/workflow-manifest.json" <<'PY'
           import datetime,json,os,pathlib,sys
           pathlib.Path(sys.argv[1]).write_text(json.dumps({
-            'schema':'APO.GCP.GITHUB.EXECUTION.MANIFEST.v1',
+            'schema':'APO.GCP.GITHUB.EXECUTION.MANIFEST.v2',
             'repository':os.getenv('GITHUB_REPOSITORY'),'run_id':os.getenv('GITHUB_RUN_ID'),
             'run_attempt':os.getenv('GITHUB_RUN_ATTEMPT'),'event_name':os.getenv('GITHUB_EVENT_NAME'),
             'ref':os.getenv('GITHUB_REF'),'sha':os.getenv('GITHUB_SHA'),
@@ -196,7 +199,11 @@ jobs:
             'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
           },indent=2),encoding='utf-8')
           PY
-          (cd "$TOOL_ROOT" && find workflow-evidence evidence -type f -print0 2>/dev/null | sort -z | xargs -0 -r sha256sum > workflow-evidence/SHA256SUMS.txt)
+          cd "$TOOL_ROOT"
+          roots=(workflow-evidence)
+          [[ ! -d evidence ]] || roots+=(evidence)
+          find "${roots[@]}" -type f ! -name SHA256SUMS.txt -print0 \
+            | sort -z | xargs -0 -r sha256sum > workflow-evidence/SHA256SUMS.txt
 
       - name: Upload complete evidence
         if: always()
@@ -221,5 +228,21 @@ jobs:
             echo "- Deployment gate: \`$INPUT_APPROVE_DEPLOY\`"
             echo "- Auth route: \`${{ steps.auth.outputs.mode }}\`"
             echo "- Package validation: \`${{ steps.package.outputs.status }}\`"
+            echo "- Execution: \`${{ steps.execute.outputs.status || steps.blocker.outputs.status }}\`"
             echo "- Evidence: \`gcp-pipeline-resource-provisioning-evidence-${{ github.run_id }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce final execution state
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "${{ steps.auth.outputs.mode }}" == none ]]; then
+            echo "FINAL_STATE=BLOCKED_NO_GCP_AUTH_ROUTE" >&2
+            exit 67
+          fi
+          [[ "${{ steps.execute.outputs.status }}" == PASS ]] || {
+            echo "FINAL_STATE=FAILED_BEFORE_VERIFIED_CLOSURE" >&2
+            exit 68
+          }
+          echo FINAL_STATE=PASS
