@@ -1,0 +1,57 @@
+environments:
+  __ENV_NAME__:
+    project: "__PROJECT_ID__"
+    region: "__REGION__"
+    composer_environment: "__COMPOSER_ENVIRONMENT__"
+    artifact_storage:
+      bucket: "__ARTIFACT_BUCKET__"
+      path_prefix: "hyperai-resource-provisioning"
+    pipelines:
+      - source: "hyperai-resource-smoke.yaml"
+    variables:
+      dataset_name: "__DATASET_ID__"
+      table_name: "__TABLE_ID__"
+    resources:
+      - type: bigquery.dataset
+        name: "{{ dataset_name }}"
+        updateAction: patch
+        definition:
+          friendlyName: "HyperAI agent telemetry (__ENV_NAME__)"
+          description: "Development landing zone for HyperAI runtime and agent telemetry."
+          location: "__BQ_LOCATION__"
+          labels:
+            environment: "__ENV_NAME__"
+            system: "hyperai"
+            managed_by: "orchestration_pipelines"
+
+      - type: bigquery.table
+        name: "{{ table_name }}"
+        parent: "{{ dataset_name }}"
+        updateAction: patch
+        definition:
+          description: "Partitioned HyperAI agent event stream."
+          labels:
+            environment: "__ENV_NAME__"
+            system: "hyperai"
+            managed_by: "orchestration_pipelines"
+          schema:
+            fields:
+              - name: event_ts
+                type: TIMESTAMP
+                mode: REQUIRED
+              - name: trace_id
+                type: STRING
+                mode: REQUIRED
+              - name: runtime_id
+                type: STRING
+                mode: REQUIRED
+              - name: event_type
+                type: STRING
+                mode: REQUIRED
+              - name: payload
+                type: JSON
+                mode: NULLABLE
+          timePartitioning:
+            type: DAY
+            field: event_ts
+          requirePartitionFilter: true
