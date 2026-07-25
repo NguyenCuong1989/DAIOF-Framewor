@@ -1,0 +1,6 @@
+gha-creds-*.json
+work/
+evidence/
+workflow-evidence/
+__pycache__/
+*.pyc

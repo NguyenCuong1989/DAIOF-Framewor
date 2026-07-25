@@ -1,0 +1,47 @@
+name: GCP WIF Bootstrap Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - automation/gcp-pipeline-resource-provisioning/bootstrap_github_wif.sh
+      - automation/gcp-pipeline-resource-provisioning/EXECUTION_HANDOFF.json
+      - .github/workflows/gcp-wif-bootstrap-validate.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell and handoff contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SCRIPT=automation/gcp-pipeline-resource-provisioning/bootstrap_github_wif.sh
+          HANDOFF=automation/gcp-pipeline-resource-provisioning/EXECUTION_HANDOFF.json
+          bash -n "$SCRIPT"
+          python3 - "$HANDOFF" <<'PY'
+          import json,pathlib,sys
+          x=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert x['current_status']=='READY_FOR_CLOUD_SHELL_EXECUTOR'
+          assert x['trace']['project_id']=='gen-lang-client-0444933822'
+          assert x['trace']['environment']=='dev'
+          assert 'create long-lived service-account keys' in x['forbidden_operations']
+          PY
+          grep -Fq 'roles/iam.workloadIdentityUser' "$SCRIPT"
+          grep -Fq 'GITHUB_REPOSITORY="NguyenCuong1989/DAIOF-Framewor"' "$SCRIPT"
+          grep -Fq 'EXPECTED_CONDITION="assertion.repository ==' "$SCRIPT"
+          grep -Fq 'gh run rerun' "$SCRIPT"
+
+      - name: Confirm keyless-only boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          SCRIPT=automation/gcp-pipeline-resource-provisioning/bootstrap_github_wif.sh
+          ! grep -Eq 'service-accounts keys create|credentials_json|private_key' "$SCRIPT"
+          echo KEYLESS_BOOTSTRAP_STATIC_GATE=PASS

@@ -1,0 +1,21 @@
+modelVersion: "1.0"
+pipelineId: "hyperai-resource-provisioning-smoke"
+description: "Smoke pipeline for the provisioned HyperAI telemetry landing zone."
+runner: "airflow"
+owner: "hyperai-platform"
+tags:
+  - "hyperai"
+  - "resource-provisioning"
+defaults:
+  projectId: "{{ project }}"
+  location: "{{ region }}"
+  executionConfig:
+    retries: 0
+actions:
+  - python:
+      name: "resource_provisioning_smoke"
+      executionTimeout: "10m"
+      mainFilePath: "scripts/smoke.py"
+      pythonCallable: "main"
+      engine:
+        local: {}

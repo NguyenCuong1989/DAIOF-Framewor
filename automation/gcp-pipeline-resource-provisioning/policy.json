@@ -1,0 +1,24 @@
+{
+  "schema": "APO.GCP.PIPELINE.RESOURCE.PROVISIONING.POLICY.v2",
+  "default_mode": "validate",
+  "deploy_requires": "--approve-deploy",
+  "fail_closed_on_ambiguity": true,
+  "allowed_update_actions": [
+    "patch",
+    "skip"
+  ],
+  "forbidden_update_actions": [
+    "recreate"
+  ],
+  "secrets_allowed": false,
+  "required_resource_types": [
+    "bigquery.dataset",
+    "bigquery.table"
+  ],
+  "evidence_zip_required": true,
+  "extension_profiles": {
+    "minimal": "dataset and partitioned table",
+    "dataform": "reserved extension hook; requires explicit repository and service-account inputs",
+    "dts": "reserved extension hook; requires explicit source configuration and target dataset"
+  }
+}

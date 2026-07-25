@@ -1,0 +1,38 @@
+{
+  "schema": "APO.RUNTIME.EXECUTION.HANDOFF.v1",
+  "trace": {
+    "pull_request": 6,
+    "blocked_run_id": 30117878807,
+    "blocked_artifact_id": 8606152730,
+    "project_id": "gen-lang-client-0444933822",
+    "environment": "dev"
+  },
+  "origin_agent": {
+    "agent": "ChatGPT",
+    "surface": "chatbot",
+    "executor_boundary": "no direct GCP or Cloud Shell command executor"
+  },
+  "target_runtime": {
+    "runtime": "Google Cloud Shell",
+    "required_identity": "active project administrator or equivalent IAM bootstrap authority",
+    "entrypoint": "automation/gcp-pipeline-resource-provisioning/bootstrap_github_wif.sh"
+  },
+  "authorized_operations": [
+    "enable IAM Credentials, STS, Composer, BigQuery, and Cloud Storage APIs",
+    "create or reuse a keyless GitHub Workload Identity Pool and OIDC provider restricted to NguyenCuong1989/DAIOF-Framewor",
+    "create or reuse github-gcp-provisioner service account",
+    "grant documented dev provisioning roles",
+    "set GitHub Actions repository variables when gh authentication is available",
+    "rerun blocked workflow 30117878807",
+    "preserve a hashed evidence ZIP"
+  ],
+  "forbidden_operations": [
+    "create long-lived service-account keys",
+    "store credentials in the repository",
+    "use recreate for provisioned resources",
+    "deploy outside dev",
+    "continue on ambiguous identity or resource selection"
+  ],
+  "resume_condition": "GCP_WIF_PROVIDER and GCP_SERVICE_ACCOUNT are visible to the PR workflow and the full provisioning run reaches verified closure",
+  "current_status": "READY_FOR_CLOUD_SHELL_EXECUTOR"
+}

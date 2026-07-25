@@ -1,0 +1,248 @@
+name: GCP Pipeline Resource Provisioning Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Execution mode
+        required: true
+        default: auto
+        type: choice
+        options: [discover, validate, auto, deploy, verify]
+      environment:
+        description: Deployment environment
+        required: true
+        default: dev
+        type: string
+      approve_deploy:
+        description: Open the deployment gate
+        required: true
+        default: true
+        type: boolean
+      project_id:
+        description: GCP project ID
+        required: false
+        default: gen-lang-client-0444933822
+        type: string
+      region:
+        description: Optional region; otherwise discovered from Composer
+        required: false
+        type: string
+      composer_environment:
+        description: Optional Composer environment; otherwise discovered fail-closed
+        required: false
+        type: string
+      artifact_bucket:
+        description: Optional artifact bucket; otherwise discovered fail-closed
+        required: false
+        type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/gcp-pipeline-resource-provisioning-dev.yml
+      - automation/gcp-pipeline-resource-provisioning/**
+
+concurrency:
+  group: gcp-pipeline-resource-provisioning-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  provision-dev:
+    name: Validate, provision, verify, preserve evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TOOL_ROOT: automation/gcp-pipeline-resource-provisioning
+      INPUT_MODE: ${{ inputs.mode || 'auto' }}
+      INPUT_ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+      INPUT_APPROVE_DEPLOY: ${{ github.event_name == 'pull_request' && 'true' || inputs.approve_deploy }}
+      INPUT_PROJECT_ID: ${{ inputs.project_id || vars.GCP_PROJECT_ID || 'gen-lang-client-0444933822' }}
+      INPUT_REGION: ${{ inputs.region || vars.GCP_REGION || '' }}
+      INPUT_COMPOSER_ENVIRONMENT: ${{ inputs.composer_environment || vars.GCP_COMPOSER_ENVIRONMENT || '' }}
+      INPUT_ARTIFACT_BUCKET: ${{ inputs.artifact_bucket || vars.GCP_ARTIFACT_BUCKET || '' }}
+      WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
+
+    steps:
+      - name: Checkout execution branch
+        uses: actions/checkout@v4
+
+      - name: Verify execution package
+        id: package
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          chmod +x "$TOOL_ROOT/run_skill.sh"
+          bash -n "$TOOL_ROOT/run_skill.sh"
+          python3 -m py_compile "$TOOL_ROOT/scripts/smoke.py"
+          python3 - <<'PY'
+          import json, pathlib
+          policy=json.loads(pathlib.Path('automation/gcp-pipeline-resource-provisioning/policy.json').read_text())
+          assert policy['deploy_requires']=='--approve-deploy'
+          assert 'recreate' in policy['forbidden_update_actions']
+          assert policy['secrets_allowed'] is False
+          PY
+          echo status=PASS >> "$GITHUB_OUTPUT"
+
+      - name: Select GCP authentication route
+        id: auth
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$TOOL_ROOT/workflow-evidence"
+          mode=none
+          if [[ -n "$WIF_PROVIDER" && -n "$WIF_SERVICE_ACCOUNT" ]]; then
+            mode=wif
+          elif [[ -n "$GCP_CREDENTIALS_JSON" ]]; then
+            mode=json
+          fi
+          python3 - "$TOOL_ROOT/workflow-evidence/auth-preflight.json" "$mode" <<'PY'
+          import datetime,json,pathlib,sys
+          pathlib.Path(sys.argv[1]).write_text(json.dumps({
+            'schema':'APO.GCP.AUTH.PREFLIGHT.v2','auth_mode':sys.argv[2],
+            'secrets_disclosed':False,
+            'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
+          },indent=2),encoding='utf-8')
+          PY
+          echo mode="$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate with Workload Identity Federation
+        if: steps.auth.outputs.mode == 'wif'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+          project_id: ${{ env.INPUT_PROJECT_ID }}
+
+      - name: Authenticate with service-account JSON fallback
+        if: steps.auth.outputs.mode == 'json'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ env.GCP_CREDENTIALS_JSON }}
+          project_id: ${{ env.INPUT_PROJECT_ID }}
+
+      - name: Install Google Cloud CLI
+        if: steps.auth.outputs.mode != 'none'
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.INPUT_PROJECT_ID }}
+
+      - name: Record missing-auth blocker
+        if: steps.auth.outputs.mode == 'none'
+        id: blocker
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - "$TOOL_ROOT/workflow-evidence/blocker.json" <<'PY'
+          import datetime,json,pathlib,sys
+          pathlib.Path(sys.argv[1]).write_text(json.dumps({
+            'schema':'APO.GCP.EXECUTION.BLOCKER.v2','status':'BLOCKED',
+            'reason':'NO_GCP_AUTH_ROUTE',
+            'accepted_routes':['vars.GCP_WIF_PROVIDER + vars.GCP_SERVICE_ACCOUNT','secrets.GCP_CREDENTIALS_JSON'],
+            'technical_mutation_performed':False,
+            'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
+          },indent=2),encoding='utf-8')
+          PY
+          echo status=BLOCKED >> "$GITHUB_OUTPUT"
+
+      - name: Attest GCP identity
+        if: steps.auth.outputs.mode != 'none'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          gcloud auth list --filter=status:ACTIVE --format=json > "$TOOL_ROOT/workflow-evidence/auth.json"
+          gcloud config list --format=json > "$TOOL_ROOT/workflow-evidence/config.json"
+          gcloud projects describe "$INPUT_PROJECT_ID" --format=json > "$TOOL_ROOT/workflow-evidence/project.json"
+          python3 - "$TOOL_ROOT/workflow-evidence/auth.json" <<'PY'
+          import hashlib,json,pathlib,sys
+          p=pathlib.Path(sys.argv[1]); rows=json.loads(p.read_text())
+          for row in rows:
+            account=row.pop('account','')
+            row['account_sha256']=hashlib.sha256(account.encode()).hexdigest() if account else None
+          p.write_text(json.dumps(rows,indent=2),encoding='utf-8')
+          PY
+
+      - name: Execute full provisioning skill
+        if: steps.auth.outputs.mode != 'none'
+        id: execute
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          args=(--mode "$INPUT_MODE" --environment "$INPUT_ENVIRONMENT" --project "$INPUT_PROJECT_ID" --keep-work)
+          [[ "$INPUT_APPROVE_DEPLOY" == true ]] && args+=(--approve-deploy)
+          [[ -z "$INPUT_REGION" ]] || args+=(--region "$INPUT_REGION")
+          [[ -z "$INPUT_COMPOSER_ENVIRONMENT" ]] || args+=(--composer-environment "$INPUT_COMPOSER_ENVIRONMENT")
+          [[ -z "$INPUT_ARTIFACT_BUCKET" ]] || args+=(--artifact-bucket "$INPUT_ARTIFACT_BUCKET")
+          "$TOOL_ROOT/run_skill.sh" "${args[@]}"
+          echo status=PASS >> "$GITHUB_OUTPUT"
+
+      - name: Build workflow evidence manifest
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$TOOL_ROOT/workflow-evidence"
+          python3 - "$TOOL_ROOT/workflow-evidence/workflow-manifest.json" <<'PY'
+          import datetime,json,os,pathlib,sys
+          pathlib.Path(sys.argv[1]).write_text(json.dumps({
+            'schema':'APO.GCP.GITHUB.EXECUTION.MANIFEST.v2',
+            'repository':os.getenv('GITHUB_REPOSITORY'),'run_id':os.getenv('GITHUB_RUN_ID'),
+            'run_attempt':os.getenv('GITHUB_RUN_ATTEMPT'),'event_name':os.getenv('GITHUB_EVENT_NAME'),
+            'ref':os.getenv('GITHUB_REF'),'sha':os.getenv('GITHUB_SHA'),
+            'project_id':os.getenv('INPUT_PROJECT_ID'),'environment':os.getenv('INPUT_ENVIRONMENT'),
+            'mode':os.getenv('INPUT_MODE'),'deployment_gate':os.getenv('INPUT_APPROVE_DEPLOY'),
+            'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat()
+          },indent=2),encoding='utf-8')
+          PY
+          cd "$TOOL_ROOT"
+          roots=(workflow-evidence)
+          [[ ! -d evidence ]] || roots+=(evidence)
+          find "${roots[@]}" -type f ! -name SHA256SUMS.txt -print0 \
+            | sort -z | xargs -0 -r sha256sum > workflow-evidence/SHA256SUMS.txt
+
+      - name: Upload complete evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcp-pipeline-resource-provisioning-evidence-${{ github.run_id }}
+          path: |
+            ${{ env.TOOL_ROOT }}/workflow-evidence
+            ${{ env.TOOL_ROOT }}/evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish execution summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## GCP Pipeline Resource Provisioning'
+            echo "- Project: \`$INPUT_PROJECT_ID\`"
+            echo "- Environment: \`$INPUT_ENVIRONMENT\`"
+            echo "- Mode: \`$INPUT_MODE\`"
+            echo "- Deployment gate: \`$INPUT_APPROVE_DEPLOY\`"
+            echo "- Auth route: \`${{ steps.auth.outputs.mode }}\`"
+            echo "- Package validation: \`${{ steps.package.outputs.status }}\`"
+            echo "- Execution: \`${{ steps.execute.outputs.status || steps.blocker.outputs.status }}\`"
+            echo "- Evidence: \`gcp-pipeline-resource-provisioning-evidence-${{ github.run_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce final execution state
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "${{ steps.auth.outputs.mode }}" == none ]]; then
+            echo "FINAL_STATE=BLOCKED_NO_GCP_AUTH_ROUTE" >&2
+            exit 67
+          fi
+          [[ "${{ steps.execute.outputs.status }}" == PASS ]] || {
+            echo "FINAL_STATE=FAILED_BEFORE_VERIFIED_CLOSURE" >&2
+            exit 68
+          }
+          echo FINAL_STATE=PASS
