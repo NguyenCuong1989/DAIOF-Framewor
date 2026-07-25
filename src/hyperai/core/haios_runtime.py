@@ -18,13 +18,16 @@ sys.path.insert(0, str(root_dir))
 # Import from root-level implementation
 try:
     from haios_runtime import HAIOSRuntime as HAIOSRuntimeImpl
+
     HAIOSRuntime = HAIOSRuntimeImpl
 except ImportError:
     # If haios_runtime doesn't exist, provide a stub
     class HAIOSRuntime:
         """Stub implementation of HAIOSRuntime"""
+
         def __init__(self):
             self.version = "1.0.0"
             self.creator = "alpha_prime_omega"
+
 
 __all__ = ["HAIOSRuntime"]

@@ -5,17 +5,18 @@ Tự động cải thiện network effect và visibility của repository
 Tuân thủ 4 trụ cột: An toàn - Đường dài - Tin vào số liệu - Hạn chế rủi ro
 """
 
-import os
 import json
+import os
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
-import time
+from typing import Any, Dict, List
+
 
 class GitHubNetworkOptimizer:
     """Optimize repository network presence and visibility"""
-    
+
     def __init__(self, repo_path: str = "."):
         self.repo_path = Path(repo_path)
         self.metrics = {
@@ -23,72 +24,69 @@ class GitHubNetworkOptimizer:
             "badges_added": 0,
             "topics_updated": 0,
             "metadata_enhanced": 0,
-            "network_score": 0
+            "network_score": 0,
         }
-        
+
     def analyze_current_state(self) -> Dict[str, Any]:
         """Phân tích trạng thái hiện tại của repo"""
         print("🔍 Analyzing current GitHub network state...")
-        
+
         state = {
             "has_badges": self._check_badges(),
             "has_topics": self._check_topics(),
             "has_social_preview": self._check_social_preview(),
             "has_sponsors": self._check_sponsors(),
             "readme_score": self._analyze_readme(),
-            "metadata_completeness": 0
+            "metadata_completeness": 0,
         }
-        
+
         # Calculate metadata completeness
-        completeness = sum([
-            30 if state["has_badges"] else 0,
-            25 if state["has_topics"] else 0,
-            20 if state["has_social_preview"] else 0,
-            15 if state["has_sponsors"] else 0,
-            state["readme_score"]
-        ])
+        completeness = sum(
+            [
+                30 if state["has_badges"] else 0,
+                25 if state["has_topics"] else 0,
+                20 if state["has_social_preview"] else 0,
+                15 if state["has_sponsors"] else 0,
+                state["readme_score"],
+            ]
+        )
         state["metadata_completeness"] = min(100, completeness)
-        
+
         print(f"📊 Current Network Score: {state['metadata_completeness']}/100")
         return state
-    
+
     def _check_badges(self) -> bool:
         """Check if README has GitHub badges"""
         readme = self.repo_path / "README.md"
         if not readme.exists():
             return False
-        
+
         content = readme.read_text()
-        badge_indicators = [
-            "![",
-            "https://img.shields.io",
-            "badge",
-            "GitHub"
-        ]
+        badge_indicators = ["![", "https://img.shields.io", "badge", "GitHub"]
         return any(indicator in content for indicator in badge_indicators)
-    
+
     def _check_topics(self) -> bool:
         """Check if repository has topics/tags"""
         # Would need GitHub API - simulate for now
         return False
-    
+
     def _check_social_preview(self) -> bool:
         """Check if social preview image exists"""
         return (self.repo_path / ".github" / "social-preview.png").exists()
-    
+
     def _check_sponsors(self) -> bool:
         """Check if GitHub Sponsors is configured"""
         return (self.repo_path / ".github" / "FUNDING.yml").exists()
-    
+
     def _analyze_readme(self) -> int:
         """Analyze README quality (0-10 score)"""
         readme = self.repo_path / "README.md"
         if not readme.exists():
             return 0
-        
+
         content = readme.read_text()
         score = 0
-        
+
         # Check for key sections
         sections = [
             "## Features",
@@ -96,31 +94,31 @@ class GitHubNetworkOptimizer:
             "## Usage",
             "## Documentation",
             "## Contributing",
-            "## License"
+            "## License",
         ]
-        
+
         for section in sections:
             if section.lower() in content.lower():
                 score += 1.5
-        
+
         return min(10, int(score))
-    
+
     def enhance_readme_badges(self) -> bool:
         """Add comprehensive GitHub badges to README"""
         print("🎖️  Enhancing README with GitHub badges...")
-        
+
         readme = self.repo_path / "README.md"
         if not readme.exists():
             print("   ⚠️  README.md not found")
             return False
-        
+
         content = readme.read_text()
-        
+
         # Check if badges already exist
         if "![GitHub" in content and "img.shields.io" in content:
             print("   ℹ️  Badges already present")
             return False
-        
+
         # Create comprehensive badge section
         badges = """
 <!-- GitHub Network Badges -->
@@ -149,33 +147,33 @@ class GitHubNetworkOptimizer:
 
 ---
 """
-        
+
         # Insert badges after first heading
-        lines = content.split('\n')
+        lines = content.split("\n")
         insert_pos = 0
-        
+
         # Find first heading
         for i, line in enumerate(lines):
-            if line.startswith('#'):
+            if line.startswith("#"):
                 insert_pos = i + 1
                 break
-        
+
         lines.insert(insert_pos, badges)
-        new_content = '\n'.join(lines)
-        
+        new_content = "\n".join(lines)
+
         # Write back
         readme.write_text(new_content)
         self.metrics["badges_added"] += 12
-        
+
         print(f"   ✅ Added {self.metrics['badges_added']} badges to README")
         return True
-    
+
     def create_github_metadata_files(self) -> int:
         """Create GitHub special files for better network visibility"""
         print("📁 Creating GitHub metadata files...")
-        
+
         created = 0
-        
+
         # 1. FUNDING.yml for GitHub Sponsors visibility
         funding_file = self.repo_path / ".github" / "FUNDING.yml"
         if not funding_file.exists():
@@ -190,7 +188,7 @@ github: [NguyenCuong1989]  # GitHub Sponsors
             funding_file.write_text(funding_content)
             print("   ✅ Created FUNDING.yml")
             created += 1
-        
+
         # 2. CODEOWNERS for clear ownership
         codeowners_file = self.repo_path / ".github" / "CODEOWNERS"
         if not codeowners_file.exists():
@@ -207,7 +205,7 @@ github: [NguyenCuong1989]  # GitHub Sponsors
             codeowners_file.write_text(codeowners_content)
             print("   ✅ Created CODEOWNERS")
             created += 1
-        
+
         # 3. SECURITY.md for security policy visibility
         security_file = self.repo_path / "SECURITY.md"
         if not security_file.exists():
@@ -259,7 +257,7 @@ Contributors who responsibly disclose vulnerabilities will be:
             security_file.write_text(security_content)
             print("   ✅ Created SECURITY.md")
             created += 1
-        
+
         # 4. CODE_OF_CONDUCT.md for community standards
         conduct_file = self.repo_path / "CODE_OF_CONDUCT.md"
         if not conduct_file.exists():
@@ -312,14 +310,14 @@ version 2.0, available at https://www.contributor-covenant.org/version/2/0/code_
             conduct_file.write_text(conduct_content)
             print("   ✅ Created CODE_OF_CONDUCT.md")
             created += 1
-        
+
         self.metrics["metadata_enhanced"] = created
         return created
-    
+
     def create_topic_suggestions(self) -> List[str]:
         """Generate suggested topics/tags for GitHub repo"""
         print("🏷️  Generating topic suggestions...")
-        
+
         topics = [
             # Core technology
             "python",
@@ -327,44 +325,41 @@ version 2.0, available at https://www.contributor-covenant.org/version/2/0/code_
             "github-actions",
             "ai",
             "machine-learning",
-            
             # Functionality
             "autonomous-system",
             "self-improving",
             "digital-organism",
             "continuous-integration",
             "devops",
-            
             # Concepts
             "artificial-intelligence",
             "autonomous-agents",
             "workflow-automation",
             "self-healing",
             "adaptive-systems",
-            
             # Framework
             "framework",
             "open-source",
             "developer-tools",
             "productivity",
-            "code-quality"
+            "code-quality",
         ]
-        
+
         print(f"   📋 Generated {len(topics)} topic suggestions")
         print(f"   🏷️  Topics: {', '.join(topics[:10])}...")
-        
+
         return topics
-    
+
     def create_social_preview_template(self) -> bool:
         """Create template for social preview image"""
         print("🖼️  Creating social preview template...")
-        
+
         preview_dir = self.repo_path / ".github"
         preview_dir.mkdir(exist_ok=True)
-        
+
         # Create instruction file for manual image creation
         instructions = preview_dir / "SOCIAL_PREVIEW_GUIDE.md"
-        
+
         content = """# Social Preview Image Guide
 
 ## 📐 Specifications
@@ -422,18 +417,18 @@ Check preview at:
 
 *Auto-generated by GitHub Network Optimizer*
 """
-        
+
         instructions.write_text(content)
         print("   ✅ Created social preview guide")
         return True
-    
+
     def generate_network_report(self) -> str:
         """Generate comprehensive network optimization report"""
         print("\n📊 Generating Network Optimization Report...")
-        
+
         state = self.analyze_current_state()
         topics = self.create_topic_suggestions()
-        
+
         report = f"""
 # 🌐 GitHub Network Optimization Report
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -521,73 +516,70 @@ Monitor these metrics weekly:
 *Generated by DAIOF Autonomous Network Optimizer*
 *Following D&R Protocol: An toàn - Đường dài - Tin vào số liệu - Hạn chế rủi ro*
 """
-        
+
         # Save report
         report_file = self.repo_path / "NETWORK_REPORT.md"
         report_file.write_text(report)
-        
+
         print(f"   ✅ Report saved to NETWORK_REPORT.md")
         return report
-    
+
     def run_full_optimization(self) -> Dict[str, Any]:
         """Run complete network optimization suite"""
         print("🚀 Starting Full GitHub Network Optimization")
-        print("="*60)
-        
-        results = {
-            "start_time": datetime.now().isoformat(),
-            "optimizations": []
-        }
-        
+        print("=" * 60)
+
+        results = {"start_time": datetime.now().isoformat(), "optimizations": []}
+
         # 1. Enhance README with badges
         if self.enhance_readme_badges():
             results["optimizations"].append("readme_badges")
-        
+
         # 2. Create metadata files
         created = self.create_github_metadata_files()
         if created > 0:
             results["optimizations"].append(f"metadata_files_{created}")
-        
+
         # 3. Create social preview guide
         if self.create_social_preview_template():
             results["optimizations"].append("social_preview_guide")
-        
+
         # 4. Generate topics
         topics = self.create_topic_suggestions()
         results["topics"] = topics
-        
+
         # 5. Generate report
         report = self.generate_network_report()
         results["report_generated"] = True
-        
+
         # 6. Final metrics
         final_state = self.analyze_current_state()
         results["final_network_score"] = final_state["metadata_completeness"]
         results["metrics"] = self.metrics
         results["end_time"] = datetime.now().isoformat()
-        
-        print("\n" + "="*60)
+
+        print("\n" + "=" * 60)
         print(f"✅ Network Optimization Complete!")
         print(f"📊 Final Network Score: {results['final_network_score']}/100")
         print(f"🎯 Optimizations Applied: {len(results['optimizations'])}")
-        
+
         return results
 
 
 def main():
     """Main execution"""
     print("🧬 DAIOF GitHub Network Optimizer v1.0")
-    print("="*60)
-    
+    print("=" * 60)
+
     optimizer = GitHubNetworkOptimizer()
     results = optimizer.run_full_optimization()
-    
+
     print("\n🎉 All optimizations complete!")
     print(f"📄 Check NETWORK_REPORT.md for full details")
     print(f"🔗 Next: Add topics via GitHub UI")
-    
+
     return results
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

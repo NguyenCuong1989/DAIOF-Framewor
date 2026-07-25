@@ -16,6 +16,8 @@ root_dir = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(root_dir))
 
 # Import from root-level implementation
-from digital_ai_organism_framework import SymphonyControlCenter, ControlMetaData, SymphonyState
+from digital_ai_organism_framework import (ControlMetaData,
+                                           SymphonyControlCenter,
+                                           SymphonyState)
 
 __all__ = ["SymphonyControlCenter", "ControlMetaData", "SymphonyState"]

@@ -4,29 +4,38 @@ Social Preview Image Generator for DAIOF Framework
 Creates 1280x640 terminal-style banner with neon accents
 """
 
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 # Image specifications
 WIDTH = 1280
 HEIGHT = 640
-BG_COLOR = '#0d1117'  # GitHub dark
-NEON_GREEN = '#00ff9f'
-WHITE = '#ffffff'
-CYAN = '#00d9ff'
-GRAY = '#8b949e'
-TERMINAL_BG = '#161b22'
+BG_COLOR = "#0d1117"  # GitHub dark
+NEON_GREEN = "#00ff9f"
+WHITE = "#ffffff"
+CYAN = "#00d9ff"
+GRAY = "#8b949e"
+TERMINAL_BG = "#161b22"
 
 # Create image
-img = Image.new('RGB', (WIDTH, HEIGHT), BG_COLOR)
+img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
 draw = ImageDraw.Draw(img)
 
 try:
     # Try to use Monaco or Courier (monospace fonts)
-    title_font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Monaco.dfont', 72)
-    subtitle_font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Monaco.dfont', 36)
-    text_font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Monaco.dfont', 24)
-    small_font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Monaco.dfont', 20)
+    title_font = ImageFont.truetype(
+        "/System/Library/Fonts/Supplemental/Monaco.dfont", 72
+    )
+    subtitle_font = ImageFont.truetype(
+        "/System/Library/Fonts/Supplemental/Monaco.dfont", 36
+    )
+    text_font = ImageFont.truetype(
+        "/System/Library/Fonts/Supplemental/Monaco.dfont", 24
+    )
+    small_font = ImageFont.truetype(
+        "/System/Library/Fonts/Supplemental/Monaco.dfont", 20
+    )
 except:
     # Fallback to default font
     title_font = ImageFont.load_default()
@@ -52,8 +61,13 @@ draw.text((subtitle_x, 180), subtitle_text, font=subtitle_font, fill=WHITE)
 # Terminal box
 box_x1, box_y1 = 100, 250
 box_x2, box_y2 = 1180, 480
-draw.rounded_rectangle([(box_x1, box_y1), (box_x2, box_y2)], 
-                       radius=10, fill=TERMINAL_BG, outline=CYAN, width=2)
+draw.rounded_rectangle(
+    [(box_x1, box_y1), (box_x2, box_y2)],
+    radius=10,
+    fill=TERMINAL_BG,
+    outline=CYAN,
+    width=2,
+)
 
 # Terminal content
 terminal_lines = [
@@ -63,7 +77,7 @@ terminal_lines = [
     ("Health: 100/100 EXCELLENT", NEON_GREEN, 370),
     ("Tasks:  Real-time generation every 10s", WHITE, 400),
     ("", WHITE, 420),
-    ("🔄 Self-Improving  •  🏥 Self-Healing  •  🤖 Autonomous", CYAN, 440)
+    ("🔄 Self-Improving  •  🏥 Self-Healing  •  🤖 Autonomous", CYAN, 440),
 ]
 
 for line_text, color, y_pos in terminal_lines:
@@ -80,14 +94,18 @@ draw.text((footer_x, 550), footer_text, font=small_font, fill=GRAY)
 # Version badge (bottom right)
 badge_text = "v1.0.0"
 badge_x, badge_y = 1100, 570
-draw.rounded_rectangle([(badge_x, badge_y), (badge_x + 140, badge_y + 40)],
-                       radius=5, fill='#238636', outline='#238636')
+draw.rounded_rectangle(
+    [(badge_x, badge_y), (badge_x + 140, badge_y + 40)],
+    radius=5,
+    fill="#238636",
+    outline="#238636",
+)
 draw.text((badge_x + 20, badge_y + 8), badge_text, font=text_font, fill=WHITE)
 
 # Save image
-output_path = '.github/social-preview.png'
-os.makedirs('.github', exist_ok=True)
-img.save(output_path, 'PNG', optimize=True)
+output_path = ".github/social-preview.png"
+os.makedirs(".github", exist_ok=True)
+img.save(output_path, "PNG", optimize=True)
 
 print(f"✅ Social preview image created: {output_path}")
 print(f"   Dimensions: {WIDTH}x{HEIGHT}")

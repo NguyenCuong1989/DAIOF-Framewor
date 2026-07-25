@@ -3,9 +3,10 @@ Generate Architecture Diagram for DAIOF Framework
 Creates ASCII art architecture visualization for README
 """
 
+
 def generate_architecture_diagram():
     """Generate comprehensive architecture diagram"""
-    
+
     diagram = """
 # 🏗️ DAIOF Framework Architecture
 
@@ -249,9 +250,9 @@ def generate_architecture_diagram():
 5. **Education** - Teaching evolution, complex systems, AI concepts
 
 """
-    
+
     return diagram
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(generate_architecture_diagram())

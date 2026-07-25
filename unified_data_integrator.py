@@ -15,24 +15,28 @@ Copyright (c) 2025 Nguyễn Đức Cường (alpha_prime_omega)
 - Risk Management: Compliance checks, audit trails, rollback capabilities
 """
 
-import json
-import os
+import base64
 import hashlib
+import json
 import logging
+import os
+import sqlite3
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-import sqlite3
-import base64
+from typing import Any, Dict, List, Optional
+
 import requests
-from dataclasses import dataclass, field
 
 # Import HYPERAI Framework components
-from digital_ai_organism_framework import SymphonyControlCenter, DigitalOrganism
+from digital_ai_organism_framework import (DigitalOrganism,
+                                           SymphonyControlCenter)
+
 
 @dataclass
 class DataSource:
     """Represents a data source with compliance metadata"""
+
     name: str
     type: str  # 'chrome', 'vscode', 'github'
     path: str
@@ -42,9 +46,11 @@ class DataSource:
     privacy_score: float = 1.0
     audit_trail: List[Dict] = field(default_factory=list)
 
+
 @dataclass
 class UnifiedDataPoint:
     """Standardized data point across all sources"""
+
     source: str
     source_type: str
     timestamp: datetime
@@ -52,7 +58,10 @@ class UnifiedDataPoint:
     content: Dict[str, Any]
     metadata: Dict[str, Any] = field(default_factory=dict)
     compliance_tags: List[str] = field(default_factory=list)
-    privacy_level: str = "internal"  # 'public', 'internal', 'confidential', 'restricted'
+    privacy_level: str = (
+        "internal"  # 'public', 'internal', 'confidential', 'restricted'
+    )
+
 
 class UnifiedDataIntegrator:
     """
@@ -82,7 +91,9 @@ class UnifiedDataIntegrator:
         # Register with Symphony Control Center
         self.symphony_control.register_component("unified_data_integrator", self)
 
-        self.logger.info("🎯 Unified Data Integrator initialized with 4 Pillars compliance")
+        self.logger.info(
+            "🎯 Unified Data Integrator initialized with 4 Pillars compliance"
+        )
 
     def _setup_logging(self) -> logging.Logger:
         """Setup secure logging with compliance tracking"""
@@ -92,7 +103,7 @@ class UnifiedDataIntegrator:
         if not logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
-                '[UNIFIED-DATA] %(asctime)s - %(levelname)s - %(message)s'
+                "[UNIFIED-DATA] %(asctime)s - %(levelname)s - %(message)s"
             )
             handler.setFormatter(formatter)
             logger.addHandler(handler)
@@ -101,7 +112,9 @@ class UnifiedDataIntegrator:
 
     def _generate_encryption_key(self) -> str:
         """Generate encryption key for data protection"""
-        key_material = f"{self.creator}:{self.framework_version}:{datetime.now().isoformat()}"
+        key_material = (
+            f"{self.creator}:{self.framework_version}:{datetime.now().isoformat()}"
+        )
         return hashlib.sha256(key_material.encode()).hexdigest()[:32]
 
     def _initialize_data_sources(self):
@@ -114,7 +127,7 @@ class UnifiedDataIntegrator:
             type="chrome",
             path="/mock/chrome/bookmarks",
             compliance_level=0.9,
-            privacy_score=0.7
+            privacy_score=0.7,
         )
 
         # VSCode data source - use actual workspace settings
@@ -125,7 +138,7 @@ class UnifiedDataIntegrator:
                 type="vscode",
                 path=workspace_settings,
                 compliance_level=0.95,
-                privacy_score=0.9
+                privacy_score=0.9,
             )
 
         # GitHub extension data - mock for this environment
@@ -134,7 +147,7 @@ class UnifiedDataIntegrator:
             type="github",
             path="/mock/github/extension",
             compliance_level=0.85,
-            privacy_score=0.6
+            privacy_score=0.6,
         )
 
         self.logger.info(f"Initialized {len(self.data_sources)} data sources")
@@ -156,13 +169,15 @@ class UnifiedDataIntegrator:
             sync_context = f"sync_{source_name}"
             dr_result = self.symphony_control.apply_dr_protocol(
                 f"Sync data from {source_name} ensuring compliance and safety",
-                sync_context
+                sync_context,
             )
 
             # Check 4 Pillars compliance - be more lenient for demo
             pillars_passed = sum(dr_result["four_pillars_check"].values())
             if pillars_passed < 3:  # Require at least 3/4 pillars
-                self.logger.warning(f"4 Pillars check partially failed for {source_name} ({pillars_passed}/4), proceeding with caution")
+                self.logger.warning(
+                    f"4 Pillars check partially failed for {source_name} ({pillars_passed}/4), proceeding with caution"
+                )
                 # Continue anyway for demo purposes
 
             # Extract data based on source type
@@ -183,7 +198,9 @@ class UnifiedDataIntegrator:
                     validated_points.append(point)
 
             # Encrypt sensitive data
-            encrypted_points = [self._encrypt_data_point(point) for point in validated_points]
+            encrypted_points = [
+                self._encrypt_data_point(point) for point in validated_points
+            ]
 
             # Add to unified data store
             self.unified_data.extend(encrypted_points)
@@ -199,12 +216,14 @@ class UnifiedDataIntegrator:
                 "source": source_name,
                 "data_points": len(encrypted_points),
                 "compliance_score": source.compliance_level,
-                "creator_signature": self.symphony_control.meta_data.get_symphony_signature()
+                "creator_signature": self.symphony_control.meta_data.get_symphony_signature(),
             }
             source.audit_trail.append(audit_entry)
             self.audit_log.append(audit_entry)
 
-            self.logger.info(f"✅ Synced {len(encrypted_points)} data points from {source_name}")
+            self.logger.info(
+                f"✅ Synced {len(encrypted_points)} data points from {source_name}"
+            )
             return True
 
         except Exception as e:
@@ -220,18 +239,18 @@ class UnifiedDataIntegrator:
             {
                 "name": "HYPERAI Framework",
                 "url": "https://github.com/NguyenCuong1989/DAIOF-Framework",
-                "date_added": 1638360000000000  # Mock timestamp
+                "date_added": 1638360000000000,  # Mock timestamp
             },
             {
                 "name": "Python Documentation",
                 "url": "https://docs.python.org/3/",
-                "date_added": 1638360000000000
+                "date_added": 1638360000000000,
             },
             {
                 "name": "GitHub",
                 "url": "https://github.com",
-                "date_added": 1638360000000000
-            }
+                "date_added": 1638360000000000,
+            },
         ]
 
         for bookmark in mock_bookmarks:
@@ -244,11 +263,11 @@ class UnifiedDataIntegrator:
                     "title": bookmark["name"],
                     "url": bookmark["url"],
                     "path": "Mock Bookmarks Bar",
-                    "date_added": bookmark["date_added"]
+                    "date_added": bookmark["date_added"],
                 },
                 metadata={"source_path": source.path, "mock_data": True},
                 compliance_tags=["browsing_history", "personal_data"],
-                privacy_level="internal"
+                privacy_level="internal",
             )
             data_points.append(data_point)
 
@@ -260,7 +279,7 @@ class UnifiedDataIntegrator:
         data_points = []
 
         try:
-            with open(source.path, 'r', encoding='utf-8') as f:
+            with open(source.path, "r", encoding="utf-8") as f:
                 settings_data = json.load(f)
 
             for key, value in settings_data.items():
@@ -272,11 +291,11 @@ class UnifiedDataIntegrator:
                     content={
                         "key": key,
                         "value": str(value),  # Convert to string for consistency
-                        "category": self._categorize_vscode_setting(key)
+                        "category": self._categorize_vscode_setting(key),
                     },
                     metadata={"source_path": source.path},
                     compliance_tags=["development_tools", "configuration"],
-                    privacy_level="internal"
+                    privacy_level="internal",
                 )
                 data_points.append(data_point)
 
@@ -290,7 +309,7 @@ class UnifiedDataIntegrator:
         data_points = []
 
         # Try real GitHub API first if token available
-        github_token = os.getenv('GITHUB_TOKEN')
+        github_token = os.getenv("GITHUB_TOKEN")
         if github_token:
             try:
                 # Get notifications
@@ -307,35 +326,48 @@ class UnifiedDataIntegrator:
                             "title": notification.get("subject", {}).get("title"),
                             "type": notification.get("subject", {}).get("type"),
                             "reason": notification.get("reason"),
-                            "unread": notification.get("unread", True)
+                            "unread": notification.get("unread", True),
                         },
                         metadata={"source_path": source.path, "real_data": True},
-                        compliance_tags=["notifications", "collaboration", "external_api"],
-                        privacy_level="internal"
+                        compliance_tags=[
+                            "notifications",
+                            "collaboration",
+                            "external_api",
+                        ],
+                        privacy_level="internal",
                     )
                     data_points.append(data_point)
 
                 # Get Copilot status if possible
-                copilot_status = self.control_copilot_settings("NguyenCuong1989/DAIOF-Framework", "check_status")
+                copilot_status = self.control_copilot_settings(
+                    "NguyenCuong1989/DAIOF-Framework", "check_status"
+                )
                 if copilot_status:
                     data_point = UnifiedDataPoint(
                         source=source.name,
                         source_type=source.type,
                         timestamp=datetime.now(),
                         data_type="copilot_status",
-                        content={"enabled": True, "repo": "NguyenCuong1989/DAIOF-Framework"},
+                        content={
+                            "enabled": True,
+                            "repo": "NguyenCuong1989/DAIOF-Framework",
+                        },
                         metadata={"source_path": source.path, "real_data": True},
                         compliance_tags=["ai_tools", "development", "external_api"],
-                        privacy_level="internal"
+                        privacy_level="internal",
                     )
                     data_points.append(data_point)
 
                 if data_points:
-                    self.logger.info(f"Extracted {len(data_points)} real GitHub data points")
+                    self.logger.info(
+                        f"Extracted {len(data_points)} real GitHub data points"
+                    )
                     return data_points
 
             except Exception as e:
-                self.logger.warning(f"Failed to extract real GitHub data, falling back to mock: {e}")
+                self.logger.warning(
+                    f"Failed to extract real GitHub data, falling back to mock: {e}"
+                )
 
         # Fallback to mock data
         mock_github_data = [
@@ -346,22 +378,22 @@ class UnifiedDataIntegrator:
                 "description": "Digital AI Organism Framework",
                 "language": "Python",
                 "stars": 42,
-                "forks": 7
+                "forks": 7,
             },
             {
                 "type": "issue",
                 "number": 1,
                 "title": "Implement unified data integration",
                 "state": "open",
-                "labels": ["enhancement", "high-priority"]
+                "labels": ["enhancement", "high-priority"],
             },
             {
                 "type": "pull_request",
                 "number": 1,
                 "title": "Add tracing support",
                 "state": "merged",
-                "merged_at": "2025-11-17T23:00:00Z"
-            }
+                "merged_at": "2025-11-17T23:00:00Z",
+            },
         ]
 
         for item in mock_github_data:
@@ -373,7 +405,7 @@ class UnifiedDataIntegrator:
                 content=item,
                 metadata={"source_path": source.path, "mock_data": True},
                 compliance_tags=["version_control", "collaboration", "external_api"],
-                privacy_level="internal"
+                privacy_level="internal",
             )
             data_points.append(data_point)
 
@@ -389,7 +421,7 @@ class UnifiedDataIntegrator:
         # Apply D&R Protocol for GitHub API access
         dr_result = self.symphony_control.apply_dr_protocol(
             "Access GitHub notifications ensuring privacy and compliance",
-            "github_notifications_check"
+            "github_notifications_check",
         )
 
         if not all(dr_result["four_pillars_check"].values()):
@@ -397,18 +429,20 @@ class UnifiedDataIntegrator:
             return []
 
         # Get GitHub token from environment (secure storage in production)
-        github_token = os.getenv('GITHUB_TOKEN')
+        github_token = os.getenv("GITHUB_TOKEN")
         if not github_token:
             self.logger.warning("No GITHUB_TOKEN found, using mock notifications")
             return self._get_mock_notifications()
 
         headers = {
-            'Authorization': f'token {github_token}',
-            'Accept': 'application/vnd.github.v3+json'
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
         }
 
         try:
-            response = requests.get('https://api.github.com/notifications', headers=headers)
+            response = requests.get(
+                "https://api.github.com/notifications", headers=headers
+            )
             response.raise_for_status()
 
             notifications = response.json()
@@ -419,7 +453,7 @@ class UnifiedDataIntegrator:
                 "timestamp": datetime.now().isoformat(),
                 "action": "github_notifications_check",
                 "notifications_count": len(notifications),
-                "compliance_score": 1.0
+                "compliance_score": 1.0,
             }
             self.audit_log.append(audit_entry)
 
@@ -429,35 +463,40 @@ class UnifiedDataIntegrator:
             self.logger.error(f"Failed to check GitHub notifications: {e}")
             return []
 
-    def reply_to_github_notification(self, notification_id: str, reply_text: str, repo_full_name: str, issue_number: int) -> bool:
+    def reply_to_github_notification(
+        self,
+        notification_id: str,
+        reply_text: str,
+        repo_full_name: str,
+        issue_number: int,
+    ) -> bool:
         """
         Reply to a GitHub notification (post comment on issue/PR)
         """
 
         # Apply D&R Protocol for GitHub API write access
         dr_result = self.symphony_control.apply_dr_protocol(
-            f"Post reply to GitHub issue/PR ensuring compliance",
-            "github_reply_post"
+            f"Post reply to GitHub issue/PR ensuring compliance", "github_reply_post"
         )
 
         if not all(dr_result["four_pillars_check"].values()):
             self.logger.error("4 Pillars check failed for GitHub reply")
             return False
 
-        github_token = os.getenv('GITHUB_TOKEN')
+        github_token = os.getenv("GITHUB_TOKEN")
         if not github_token:
             self.logger.error("No GITHUB_TOKEN found for reply")
             return False
 
         headers = {
-            'Authorization': f'token {github_token}',
-            'Accept': 'application/vnd.github.v3+json'
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
         }
 
-        comment_data = {'body': reply_text}
+        comment_data = {"body": reply_text}
 
         try:
-            url = f'https://api.github.com/repos/{repo_full_name}/issues/{issue_number}/comments'
+            url = f"https://api.github.com/repos/{repo_full_name}/issues/{issue_number}/comments"
             response = requests.post(url, headers=headers, json=comment_data)
             response.raise_for_status()
 
@@ -470,7 +509,7 @@ class UnifiedDataIntegrator:
                 "repo": repo_full_name,
                 "issue_number": issue_number,
                 "reply_length": len(reply_text),
-                "compliance_score": 1.0
+                "compliance_score": 1.0,
             }
             self.audit_log.append(audit_entry)
 
@@ -488,28 +527,27 @@ class UnifiedDataIntegrator:
 
         # Apply D&R Protocol for Copilot management
         dr_result = self.symphony_control.apply_dr_protocol(
-            f"Manage Copilot settings for {repo_full_name}",
-            "copilot_settings_control"
+            f"Manage Copilot settings for {repo_full_name}", "copilot_settings_control"
         )
 
         if not all(dr_result["four_pillars_check"].values()):
             self.logger.error("4 Pillars check failed for Copilot control")
             return False
 
-        github_token = os.getenv('GITHUB_TOKEN')
+        github_token = os.getenv("GITHUB_TOKEN")
         if not github_token:
             self.logger.error("No GITHUB_TOKEN found for Copilot control")
             return False
 
         headers = {
-            'Authorization': f'token {github_token}',
-            'Accept': 'application/vnd.github.v3+json'
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
         }
 
         try:
-            if action == 'check_status':
+            if action == "check_status":
                 # Check Copilot usage for the repo
-                url = f'https://api.github.com/repos/{repo_full_name}/copilot/usage'
+                url = f"https://api.github.com/repos/{repo_full_name}/copilot/usage"
                 response = requests.get(url, headers=headers)
                 if response.status_code == 200:
                     usage = response.json()
@@ -519,10 +557,12 @@ class UnifiedDataIntegrator:
                     self.logger.warning(f"Copilot not available for {repo_full_name}")
                     return False
 
-            elif action in ['enable', 'disable']:
+            elif action in ["enable", "disable"]:
                 # Note: GitHub API doesn't have direct enable/disable for Copilot
                 # This would typically be done via repository settings or billing
-                self.logger.warning(f"Direct {action} not supported via API. Use repository settings.")
+                self.logger.warning(
+                    f"Direct {action} not supported via API. Use repository settings."
+                )
                 return False
 
             else:
@@ -542,10 +582,10 @@ class UnifiedDataIntegrator:
                 "subject": {
                     "title": "Implement GitHub integration",
                     "type": "Issue",
-                    "url": "https://api.github.com/repos/NguyenCuong1989/DAIOF-Framework/issues/1"
+                    "url": "https://api.github.com/repos/NguyenCuong1989/DAIOF-Framework/issues/1",
                 },
                 "reason": "mention",
-                "unread": True
+                "unread": True,
             },
             {
                 "id": "mock_2",
@@ -553,11 +593,11 @@ class UnifiedDataIntegrator:
                 "subject": {
                     "title": "Add Copilot control",
                     "type": "PullRequest",
-                    "url": "https://api.github.com/repos/NguyenCuong1989/DAIOF-Framework/pulls/1"
+                    "url": "https://api.github.com/repos/NguyenCuong1989/DAIOF-Framework/pulls/1",
                 },
                 "reason": "review_requested",
-                "unread": True
-            }
+                "unread": True,
+            },
         ]
 
     def _categorize_vscode_setting(self, key: str) -> str:
@@ -568,7 +608,7 @@ class UnifiedDataIntegrator:
             "extensions": ["extensions."],
             "terminal": ["terminal."],
             "files": ["files."],
-            "search": ["search."]
+            "search": ["search."],
         }
 
         for category, prefixes in categories.items():
@@ -620,7 +660,7 @@ class UnifiedDataIntegrator:
         # Apply D&R Protocol for reporting
         dr_result = self.symphony_control.apply_dr_protocol(
             "Generate unified data report with compliance metrics",
-            "data_report_generation"
+            "data_report_generation",
         )
 
         report = {
@@ -630,17 +670,26 @@ class UnifiedDataIntegrator:
             "data_sources": len(self.data_sources),
             "total_data_points": len(self.unified_data),
             "compliance_metrics": {
-                "overall_compliance": sum(s.compliance_level for s in self.data_sources.values()) / max(len(self.data_sources), 1),
-                "privacy_score": sum(s.privacy_score for s in self.data_sources.values()) / max(len(self.data_sources), 1),
-                "four_pillars_check": dr_result["four_pillars_check"]
+                "overall_compliance": sum(
+                    s.compliance_level for s in self.data_sources.values()
+                )
+                / max(len(self.data_sources), 1),
+                "privacy_score": sum(
+                    s.privacy_score for s in self.data_sources.values()
+                )
+                / max(len(self.data_sources), 1),
+                "four_pillars_check": dr_result["four_pillars_check"],
             },
             "data_breakdown": {},
             "audit_summary": {
                 "total_audits": len(self.audit_log),
-                "last_sync": max((s.last_sync for s in self.data_sources.values() if s.last_sync), default=None)
+                "last_sync": max(
+                    (s.last_sync for s in self.data_sources.values() if s.last_sync),
+                    default=None,
+                ),
             },
             "symphony_signature": self.symphony_control.meta_data.get_symphony_signature(),
-            "socratic_reflection": dr_result["socratic_reflection"]
+            "socratic_reflection": dr_result["socratic_reflection"],
         }
 
         # Data breakdown by source and type
@@ -657,20 +706,23 @@ class UnifiedDataIntegrator:
 
         # Filter data based on privacy level
         filtered_data = [
-            point for point in self.unified_data
+            point
+            for point in self.unified_data
             if self._privacy_level_allows_export(point.privacy_level, privacy_filter)
         ]
 
         # Apply D&R Protocol for export
         dr_result = self.symphony_control.apply_dr_protocol(
             f"Export {len(filtered_data)} data points with privacy filter {privacy_filter}",
-            "data_export"
+            "data_export",
         )
 
         # Check 4 Pillars compliance - be lenient for demo
         pillars_passed = sum(dr_result["four_pillars_check"].values())
         if pillars_passed < 3:  # Require at least 3/4 pillars
-            self.logger.warning(f"4 Pillars check partially failed for data export ({pillars_passed}/4), proceeding with caution")
+            self.logger.warning(
+                f"4 Pillars check partially failed for data export ({pillars_passed}/4), proceeding with caution"
+            )
 
         # Export data
         export_data = {
@@ -679,7 +731,7 @@ class UnifiedDataIntegrator:
                 "export_timestamp": datetime.now().isoformat(),
                 "privacy_filter": privacy_filter,
                 "data_points": len(filtered_data),
-                "compliance_signature": self.symphony_control.meta_data.get_symphony_signature()
+                "compliance_signature": self.symphony_control.meta_data.get_symphony_signature(),
             },
             "data_points": [
                 {
@@ -689,13 +741,13 @@ class UnifiedDataIntegrator:
                     "data_type": point.data_type,
                     "content": point.content,
                     "compliance_tags": point.compliance_tags,
-                    "privacy_level": point.privacy_level
+                    "privacy_level": point.privacy_level,
                 }
                 for point in filtered_data
-            ]
+            ],
         }
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
         # Audit export
@@ -705,11 +757,13 @@ class UnifiedDataIntegrator:
             "output_path": output_path,
             "data_points": len(filtered_data),
             "privacy_filter": privacy_filter,
-            "creator_signature": self.symphony_control.meta_data.get_symphony_signature()
+            "creator_signature": self.symphony_control.meta_data.get_symphony_signature(),
         }
         self.audit_log.append(audit_entry)
 
-        self.logger.info(f"✅ Exported {len(filtered_data)} data points to {output_path}")
+        self.logger.info(
+            f"✅ Exported {len(filtered_data)} data points to {output_path}"
+        )
         return True
 
     def _privacy_level_allows_export(self, data_level: str, filter_level: str) -> bool:
@@ -718,6 +772,7 @@ class UnifiedDataIntegrator:
         data_index = levels.index(data_level)
         filter_index = levels.index(filter_level)
         return data_index <= filter_index
+
 
 def main():
     """Main function demonstrating unified data integration"""
@@ -743,7 +798,9 @@ def main():
     print("\n📊 Integration Report:")
     print(f"   Data Sources: {report['data_sources']}")
     print(f"   Total Data Points: {report['total_data_points']}")
-    print(f"   Overall Compliance: {report['compliance_metrics']['overall_compliance']:.2f}")
+    print(
+        f"   Overall Compliance: {report['compliance_metrics']['overall_compliance']:.2f}"
+    )
     print(f"   Privacy Score: {report['compliance_metrics']['privacy_score']:.2f}")
 
     # Export compliant data
@@ -756,6 +813,7 @@ def main():
 
     print("\n🧬 HYPERAI Data Integration Complete")
     print("4 Pillars Maintained: Safety | Long-term | Data-driven | Risk Management")
+
 
 if __name__ == "__main__":
     main()

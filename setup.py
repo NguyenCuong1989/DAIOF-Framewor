@@ -10,21 +10,24 @@ Verification: 4287
 MIT License
 """
 
-from setuptools import setup, find_packages
 from pathlib import Path
+
+from setuptools import find_packages, setup
 
 # Read the README file
 readme_file = Path(__file__).parent / "README.md"
-long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
+long_description = (
+    readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
+)
 
 # Read requirements
 requirements_file = Path(__file__).parent / "requirements.txt"
 requirements = []
 if requirements_file.exists():
     requirements = [
-        line.strip() 
-        for line in requirements_file.read_text().split('\n') 
-        if line.strip() and not line.startswith('#')
+        line.strip()
+        for line in requirements_file.read_text().split("\n")
+        if line.strip() and not line.startswith("#")
     ]
 
 setup(
@@ -79,8 +82,14 @@ setup(
     },
     include_package_data=True,
     keywords=[
-        "ai", "digital-organism", "self-evolving", "consciousness",
-        "haios", "hyperai", "autonomous-systems", "biological-computing"
+        "ai",
+        "digital-organism",
+        "self-evolving",
+        "consciousness",
+        "haios",
+        "hyperai",
+        "autonomous-systems",
+        "biological-computing",
     ],
     license="MIT",
     zip_safe=False,

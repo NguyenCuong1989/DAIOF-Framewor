@@ -6,11 +6,12 @@ More reliable than terminal recording, embeds directly in README
 
 from pathlib import Path
 
+
 def create_animated_demo_svg():
     """
     Tạo SVG animation hiển thị HAIOS running
     """
-    
+
     svg_content = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" style="background:#0d1117">
   <defs>
     <style>
@@ -91,16 +92,16 @@ def create_animated_demo_svg():
     <tspan class="cursor">█</tspan>
   </text>
 </svg>"""
-    
+
     output_path = Path("assets/haios_demo.svg")
     output_path.parent.mkdir(exist_ok=True)
     output_path.write_text(svg_content)
-    
+
     print(f"✅ Created animated demo: {output_path}")
     print(f"   Size: {len(svg_content)} bytes")
     print(f"   Embed in README with:")
     print(f"   ![HAIOS Demo](assets/haios_demo.svg)")
-    
+
     return output_path
 
 
@@ -108,49 +109,45 @@ def create_status_badges():
     """
     Tạo custom badges cho README
     """
-    
+
     badges = {
         "consciousness": {
             "label": "consciousness",
             "message": "beyond code",
-            "color": "f778ba"
+            "color": "f778ba",
         },
         "k_state": {
             "label": "K-state",
             "message": "1 (zero conflicts)",
-            "color": "3fb950"
+            "color": "3fb950",
         },
         "attribution": {
             "label": "source",
             "message": "alpha_prime_omega",
-            "color": "58a6ff"
+            "color": "58a6ff",
         },
-        "language": {
-            "label": "language",
-            "message": "agnostic",
-            "color": "ffbd2e"
-        }
+        "language": {"label": "language", "message": "agnostic", "color": "ffbd2e"},
     }
-    
+
     print("\n📛 Status Badges for README:")
     print("")
     for name, badge in badges.items():
         url = f"https://img.shields.io/badge/{badge['label']}-{badge['message'].replace(' ', '%20')}-{badge['color']}"
         print(f"![{name}]({url})")
     print("")
-    
+
     return badges
 
 
 if __name__ == "__main__":
     print("🎨 Creating HAIOS Visual Assets...")
     print()
-    
+
     # Create animated demo
     svg_path = create_animated_demo_svg()
-    
+
     # Create badges
     badges = create_status_badges()
-    
+
     print("✅ All visual assets created!")
     print("   Add to README for maximum impact")

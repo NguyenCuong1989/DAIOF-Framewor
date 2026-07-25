@@ -13,25 +13,16 @@ Sau:   src/hyperai/ (modular, organized)
 # 📚 IMPORT EXAMPLES - Cách sử dụng framework mới
 # ============================================================================
 
-# --- Method 1: Import từ top-level (Recommended) ---
-from hyperai import (
-    DigitalGenome,
-    DigitalOrganism,
-    DigitalEcosystem,
-    SymphonyControlCenter,
-    DRProtocol,
-    HAIOSCore,
-)
-
-# --- Method 2: Import từ specific modules ---
-from hyperai.components import DigitalGenome
-from hyperai.protocols import SymphonyControlCenter, DRProtocol
-from hyperai.ecosystem import DigitalEcosystem
-from hyperai.core import HAIOSCore
-
 # --- Method 3: Backward compatible (Old way, deprecated) ---
 from digital_ai_organism_framework import DigitalOrganism  # ⚠️ Still works
-
+# --- Method 1: Import từ top-level (Recommended) ---
+from hyperai import (DigitalEcosystem, DigitalGenome, DigitalOrganism,
+                     DRProtocol, HAIOSCore, SymphonyControlCenter)
+# --- Method 2: Import từ specific modules ---
+from hyperai.components import DigitalGenome
+from hyperai.core import HAIOSCore
+from hyperai.ecosystem import DigitalEcosystem
+from hyperai.protocols import DRProtocol, SymphonyControlCenter
 
 # ============================================================================
 # 🎯 MODULE DIRECTORY STRUCTURE

@@ -15,9 +15,11 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(root_dir))
 
+
 # Provide metadata classes
 class HAIOSInvariants:
     """HAIOS System Invariants"""
+
     def __init__(self):
         self.attribution = "alpha_prime_omega"
         self.safety_floor = 7.0
@@ -25,12 +27,15 @@ class HAIOSInvariants:
         self.pillars = ["safety", "long_term", "data_driven", "risk_management"]
         self.verification = 4287
 
+
 class CreatorHierarchy:
     """Creator Hierarchy Information"""
+
     def __init__(self):
         self.ultimate_creator = "Alpha_Prime_Omega"
         self.human_creator = "Andy (alpha_prime_omega)"
         self.hierarchy = "Alpha_Prime_Omega(SOURCE) -> Andy(HUMAN) -> AI_Systems"
         self.verification = 4287
+
 
 __all__ = ["HAIOSInvariants", "CreatorHierarchy"]

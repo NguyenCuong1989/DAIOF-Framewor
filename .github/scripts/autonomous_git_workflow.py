@@ -16,19 +16,20 @@ Framework: HYPERAI
 Date: November 17, 2025
 """
 
-import os
-import sys
 import json
-import time
-import yaml
-import subprocess
-import threading
-from datetime import datetime, timedelta, UTC
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from github import Github, Auth, Repository, Issue, PullRequest
 import logging
+import os
+import subprocess
+import sys
+import threading
+import time
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import requests
+import yaml
+from github import Auth, Github, Issue, PullRequest, Repository
 
 
 class AuxiliaryPilot:
@@ -59,24 +60,30 @@ class AuxiliaryPilot:
         try:
             # Get repository stats
             stats = {
-                'name': self.repo_name,
-                'stars': self.repo.stargazers_count,
-                'forks': self.repo.forks_count,
-                'open_issues': self.repo.open_issues_count,
-                'last_push': self.repo.pushed_at.isoformat() if self.repo.pushed_at else None,
-                'health_score': self.health_score
+                "name": self.repo_name,
+                "stars": self.repo.stargazers_count,
+                "forks": self.repo.forks_count,
+                "open_issues": self.repo.open_issues_count,
+                "last_push": (
+                    self.repo.pushed_at.isoformat() if self.repo.pushed_at else None
+                ),
+                "health_score": self.health_score,
             }
 
             # Check for new issues
             new_issues = self._scan_for_issues()
             if new_issues:
-                self.logger.info(f"🚨 {len(new_issues)} new issues detected in {self.repo_name}")
+                self.logger.info(
+                    f"🚨 {len(new_issues)} new issues detected in {self.repo_name}"
+                )
                 self.active_issues.extend(new_issues)
 
             # Check for failing workflows
             failing_workflows = self._check_ci_status()
             if failing_workflows:
-                self.logger.warning(f"❌ {len(failing_workflows)} failing workflows in {self.repo_name}")
+                self.logger.warning(
+                    f"❌ {len(failing_workflows)} failing workflows in {self.repo_name}"
+                )
                 self._handle_failing_workflows(failing_workflows)
 
             # Update health score
@@ -86,14 +93,14 @@ class AuxiliaryPilot:
 
         except Exception as e:
             self.logger.error(f"❌ Pilot monitoring failed for {self.repo_name}: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def _scan_for_issues(self) -> List[Issue.Issue]:
         """Scan for new issues requiring attention"""
         try:
             # Get recent issues (last 24 hours)
             since = datetime.now(UTC) - timedelta(hours=24)
-            issues = self.repo.get_issues(state='open', since=since)
+            issues = self.repo.get_issues(state="open", since=since)
 
             urgent_issues = []
             for issue in issues:
@@ -110,14 +117,21 @@ class AuxiliaryPilot:
     def _is_urgent_issue(self, issue: Issue.Issue) -> bool:
         """Determine if issue requires urgent attention"""
         # Check labels
-        urgent_labels = ['bug', 'critical', 'security', 'breaking', 'urgent']
+        urgent_labels = ["bug", "critical", "security", "breaking", "urgent"]
         issue_labels = [label.name.lower() for label in issue.labels]
 
         if any(label in issue_labels for label in urgent_labels):
             return True
 
         # Check title keywords
-        urgent_keywords = ['crash', 'error', 'fail', 'broken', 'security', 'vulnerability']
+        urgent_keywords = [
+            "crash",
+            "error",
+            "fail",
+            "broken",
+            "security",
+            "vulnerability",
+        ]
         title_lower = issue.title.lower()
 
         if any(keyword in title_lower for keyword in urgent_keywords):
@@ -136,12 +150,14 @@ class AuxiliaryPilot:
                 runs = workflow.get_runs()
                 if runs.totalCount > 0:
                     latest_run = runs[0]
-                    if latest_run.conclusion == 'failure':
-                        failing_runs.append({
-                            'workflow': workflow.name,
-                            'run_id': latest_run.id,
-                            'failure_time': latest_run.created_at.isoformat()
-                        })
+                    if latest_run.conclusion == "failure":
+                        failing_runs.append(
+                            {
+                                "workflow": workflow.name,
+                                "run_id": latest_run.id,
+                                "failure_time": latest_run.created_at.isoformat(),
+                            }
+                        )
 
             return failing_runs
 
@@ -179,7 +195,7 @@ class AuxiliaryPilot:
 """
 
                 # Check if issue already exists
-                existing_issues = self.repo.get_issues(state='open')
+                existing_issues = self.repo.get_issues(state="open")
                 issue_exists = False
 
                 for existing in existing_issues:
@@ -191,29 +207,33 @@ class AuxiliaryPilot:
                     issue = self.repo.create_issue(
                         title=issue_title,
                         body=issue_body,
-                        labels=['bug', 'ci-failure', 'autonomous-report']
+                        labels=["bug", "ci-failure", "autonomous-report"],
                     )
-                    self.logger.info(f"📋 Created issue for failing workflow: {issue.html_url}")
+                    self.logger.info(
+                        f"📋 Created issue for failing workflow: {issue.html_url}"
+                    )
 
                     # Attempt automated fix
                     self._attempt_workflow_fix(workflow)
 
             except Exception as e:
-                self.logger.error(f"Error handling failing workflow {workflow['workflow']}: {e}")
+                self.logger.error(
+                    f"Error handling failing workflow {workflow['workflow']}: {e}"
+                )
 
     def _attempt_workflow_fix(self, workflow: Dict):
         """Attempt automated fix for failing workflow"""
         try:
             # Common fixes for CI failures
-            workflow_name = workflow['workflow'].lower()
+            workflow_name = workflow["workflow"].lower()
 
-            if 'test' in workflow_name:
+            if "test" in workflow_name:
                 # Test failures - check for common issues
                 self._fix_test_failures()
-            elif 'build' in workflow_name:
+            elif "build" in workflow_name:
                 # Build failures - check dependencies
                 self._fix_build_failures()
-            elif 'lint' in workflow_name:
+            elif "lint" in workflow_name:
                 # Linting failures - auto-fix formatting
                 self._fix_lint_failures()
 
@@ -243,7 +263,9 @@ class AuxiliaryPilot:
                     success = self._auto_fix_issue(issue)
                     if success:
                         self.active_issues.remove(issue)
-                        self.logger.info(f"✅ Auto-fixed issue #{issue.number} in {self.repo_name}")
+                        self.logger.info(
+                            f"✅ Auto-fixed issue #{issue.number} in {self.repo_name}"
+                        )
                     else:
                         self._escalate_issue(issue)
                 else:
@@ -259,11 +281,11 @@ class AuxiliaryPilot:
 
         # Auto-fixable issue types
         auto_fixable = [
-            'dependency-update',
-            'typo',
-            'formatting',
-            'simple-bug',
-            'documentation'
+            "dependency-update",
+            "typo",
+            "formatting",
+            "simple-bug",
+            "documentation",
         ]
 
         return any(label in auto_fixable for label in labels)
@@ -273,13 +295,13 @@ class AuxiliaryPilot:
         try:
             labels = [label.name.lower() for label in issue.labels]
 
-            if 'dependency-update' in labels:
+            if "dependency-update" in labels:
                 return self._fix_dependency_issue(issue)
-            elif 'typo' in labels:
+            elif "typo" in labels:
                 return self._fix_typo_issue(issue)
-            elif 'formatting' in labels:
+            elif "formatting" in labels:
                 return self._fix_formatting_issue(issue)
-            elif 'documentation' in labels:
+            elif "documentation" in labels:
                 return self._fix_documentation_issue(issue)
 
             return False
@@ -316,7 +338,7 @@ class AuxiliaryPilot:
         """Escalate issue for human attention"""
         try:
             # Add escalation label
-            issue.add_to_labels('needs-human-review')
+            issue.add_to_labels("needs-human-review")
 
             # Comment on issue
             comment = """## 🤖 Auxiliary Pilot Escalation
@@ -360,7 +382,11 @@ This issue requires human review and cannot be auto-resolved by the auxiliary pi
             base_score -= workflow_penalty
 
             # Bonus for recent activity
-            days_since_push = (datetime.now(UTC) - self.repo.pushed_at).days if self.repo.pushed_at else 30
+            days_since_push = (
+                (datetime.now(UTC) - self.repo.pushed_at).days
+                if self.repo.pushed_at
+                else 30
+            )
             activity_bonus = max(0, 10 - days_since_push)
             base_score += activity_bonus
 
@@ -373,11 +399,11 @@ This issue requires human review and cannot be auto-resolved by the auxiliary pi
     def get_status(self) -> Dict[str, Any]:
         """Get pilot status"""
         return {
-            'repository': self.repo_name,
-            'health_score': self.health_score,
-            'active_issues': len(self.active_issues),
-            'pending_fixes': len(self.pending_fixes),
-            'last_activity': self.last_activity.isoformat()
+            "repository": self.repo_name,
+            "health_score": self.health_score,
+            "active_issues": len(self.active_issues),
+            "pending_fixes": len(self.pending_fixes),
+            "last_activity": self.last_activity.isoformat(),
         }
 
 
@@ -393,8 +419,8 @@ class MultiRepositoryOrchestrator:
     """
 
     def __init__(self):
-        self.github_token = os.environ.get('GITHUB_TOKEN')
-        self.user = os.environ.get('GITHUB_ACTOR', 'NguyenCuong1989')
+        self.github_token = os.environ.get("GITHUB_TOKEN")
+        self.user = os.environ.get("GITHUB_ACTOR", "NguyenCuong1989")
         self.logger = self._setup_logging()
         self.pilots: Dict[str, AuxiliaryPilot] = {}
         self.global_health = 100
@@ -403,10 +429,10 @@ class MultiRepositoryOrchestrator:
         # HAIOS compliance
         self.k_state = 1
         self.pillars_scores = {
-            'an_toan': 10.0,
-            'duong_dai': 10.0,
-            'tin_vao_so_lieu': 10.0,
-            'han_che_rui_ro': 10.0
+            "an_toan": 10.0,
+            "duong_dai": 10.0,
+            "tin_vao_so_lieu": 10.0,
+            "han_che_rui_ro": 10.0,
         }
 
         if self.github_token:
@@ -420,11 +446,11 @@ class MultiRepositoryOrchestrator:
 
     def _setup_logging(self) -> logging.Logger:
         """Setup comprehensive logging"""
-        logger = logging.getLogger('DAIOF_MultiRepo')
+        logger = logging.getLogger("DAIOF_MultiRepo")
         logger.setLevel(logging.INFO)
 
         # File handler
-        log_file = Path('logs/multi_repo_orchestrator.log')
+        log_file = Path("logs/multi_repo_orchestrator.log")
         log_file.parent.mkdir(exist_ok=True)
 
         fh = logging.FileHandler(log_file)
@@ -436,7 +462,7 @@ class MultiRepositoryOrchestrator:
 
         # Formatter
         formatter = logging.Formatter(
-            '🧬 %(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "🧬 %(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
@@ -450,7 +476,7 @@ class MultiRepositoryOrchestrator:
         """Initialize auxiliary pilots for all repositories"""
         try:
             user = self.gh.get_user(self.user)
-            repos = user.get_repos(type='owner', sort='updated')
+            repos = user.get_repos(type="owner", sort="updated")
 
             for repo in repos:
                 if not repo.fork and repo.full_name.startswith(f"{self.user}/"):
@@ -466,12 +492,12 @@ class MultiRepositoryOrchestrator:
         self.logger.info("🔍 Starting multi-repository monitoring cycle")
 
         results = {
-            'timestamp': datetime.now(UTC).isoformat(),
-            'total_repositories': len(self.pilots),
-            'healthy_repositories': 0,
-            'issues_detected': 0,
-            'fixes_applied': 0,
-            'repository_status': {}
+            "timestamp": datetime.now(UTC).isoformat(),
+            "total_repositories": len(self.pilots),
+            "healthy_repositories": 0,
+            "issues_detected": 0,
+            "fixes_applied": 0,
+            "repository_status": {},
         }
 
         for repo_name, pilot in self.pilots.items():
@@ -483,16 +509,16 @@ class MultiRepositoryOrchestrator:
                 pilot.handle_issues()
 
                 # Update results
-                results['repository_status'][repo_name] = status
+                results["repository_status"][repo_name] = status
 
-                if status.get('health_score', 0) >= 70:
-                    results['healthy_repositories'] += 1
+                if status.get("health_score", 0) >= 70:
+                    results["healthy_repositories"] += 1
 
-                results['issues_detected'] += len(pilot.active_issues)
+                results["issues_detected"] += len(pilot.active_issues)
 
             except Exception as e:
                 self.logger.error(f"Error monitoring {repo_name}: {e}")
-                results['repository_status'][repo_name] = {'error': str(e)}
+                results["repository_status"][repo_name] = {"error": str(e)}
 
         # Update global health
         self._update_global_health(results)
@@ -500,14 +526,16 @@ class MultiRepositoryOrchestrator:
         # Check for emergency conditions
         self._check_emergency_conditions(results)
 
-        self.logger.info(f"✅ Monitoring cycle completed: {results['healthy_repositories']}/{results['total_repositories']} healthy")
+        self.logger.info(
+            f"✅ Monitoring cycle completed: {results['healthy_repositories']}/{results['total_repositories']} healthy"
+        )
         return results
 
     def _update_global_health(self, results: Dict):
         """Update global ecosystem health"""
         try:
-            total_repos = results['total_repositories']
-            healthy_repos = results['healthy_repositories']
+            total_repos = results["total_repositories"]
+            healthy_repos = results["healthy_repositories"]
 
             if total_repos > 0:
                 health_percentage = (healthy_repos / total_repos) * 100
@@ -515,9 +543,13 @@ class MultiRepositoryOrchestrator:
 
                 # Update pillars based on ecosystem health
                 if health_percentage >= 90:
-                    self.pillars_scores['an_toan'] = min(10.0, self.pillars_scores['an_toan'] + 0.1)
+                    self.pillars_scores["an_toan"] = min(
+                        10.0, self.pillars_scores["an_toan"] + 0.1
+                    )
                 elif health_percentage < 70:
-                    self.pillars_scores['an_toan'] = max(7.0, self.pillars_scores['an_toan'] - 0.5)
+                    self.pillars_scores["an_toan"] = max(
+                        7.0, self.pillars_scores["an_toan"] - 0.5
+                    )
 
         except Exception as e:
             self.logger.error(f"Error updating global health: {e}")
@@ -526,8 +558,10 @@ class MultiRepositoryOrchestrator:
         """Check for emergency conditions requiring immediate action"""
         emergency_triggers = [
             self.global_health < 50,
-            results['issues_detected'] > 10,
-            any(status.get('error') for status in results['repository_status'].values())
+            results["issues_detected"] > 10,
+            any(
+                status.get("error") for status in results["repository_status"].values()
+            ),
         ]
 
         if any(emergency_triggers):
@@ -550,10 +584,12 @@ class MultiRepositoryOrchestrator:
                     pilot.repo.create_issue(
                         title="🚨 EMERGENCY: Ecosystem Health Critical",
                         body=emergency_report,
-                        labels=['emergency', 'critical', 'autonomous-report']
+                        labels=["emergency", "critical", "autonomous-report"],
                     )
                 except Exception as e:
-                    self.logger.error(f"Error creating emergency issue in {repo_name}: {e}")
+                    self.logger.error(
+                        f"Error creating emergency issue in {repo_name}: {e}"
+                    )
 
             # Attempt emergency fixes
             self._emergency_fixes(results)
@@ -608,7 +644,7 @@ class MultiRepositoryOrchestrator:
         self.logger.info("🧬 DAIOF Multi-Repository Orchestrator - CONTINUOUS MODE")
         self.logger.info(f"⏱️  Check interval: {interval} seconds")
         self.logger.info(f"✈️  Active Pilots: {len(self.pilots)}")
-        self.logger.info("="*80)
+        self.logger.info("=" * 80)
 
         cycle_count = 0
 
@@ -617,7 +653,9 @@ class MultiRepositoryOrchestrator:
                 cycle_count += 1
                 cycle_start = datetime.now(UTC)
 
-                self.logger.info(f"\n🔄 Orchestration Cycle {cycle_count} - {cycle_start.strftime('%H:%M:%S UTC')}")
+                self.logger.info(
+                    f"\n🔄 Orchestration Cycle {cycle_count} - {cycle_start.strftime('%H:%M:%S UTC')}"
+                )
 
                 # Execute monitoring cycle
                 results = self.monitor_all_repositories()
@@ -626,8 +664,12 @@ class MultiRepositoryOrchestrator:
                 self.logger.info(f"📊 Ecosystem Summary:")
                 self.logger.info(f"   Global Health: {self.global_health:.1f}%")
                 self.logger.info(f"   K-State: {self.k_state}")
-                self.logger.info(f"   Emergency Mode: {'ACTIVE' if self.emergency_mode else 'INACTIVE'}")
-                self.logger.info(f"   HAIOS Compliance: {self._check_haios_compliance()}")
+                self.logger.info(
+                    f"   Emergency Mode: {'ACTIVE' if self.emergency_mode else 'INACTIVE'}"
+                )
+                self.logger.info(
+                    f"   HAIOS Compliance: {self._check_haios_compliance()}"
+                )
 
                 # Removed file saving to eliminate timing disruptions - data flows to unified orchestrator only
                 # self._save_orchestration_log(results)
@@ -637,7 +679,9 @@ class MultiRepositoryOrchestrator:
                 sleep_time = max(0, interval - elapsed)
 
                 if sleep_time > 0:
-                    self.logger.info(f"⏰ Next orchestration cycle in {sleep_time:.1f} seconds...")
+                    self.logger.info(
+                        f"⏰ Next orchestration cycle in {sleep_time:.1f} seconds..."
+                    )
                     time.sleep(sleep_time)
 
         except KeyboardInterrupt:
@@ -661,10 +705,12 @@ class MultiRepositoryOrchestrator:
 
     def _save_orchestration_log(self, results: Dict):
         """Save orchestration execution log"""
-        log_dir = Path('logs')
+        log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
 
-        log_file = log_dir / f"orchestration_{datetime.now(UTC).strftime('%Y%m%d')}.json"
+        log_file = (
+            log_dir / f"orchestration_{datetime.now(UTC).strftime('%Y%m%d')}.json"
+        )
 
         # Load existing logs
         existing_logs = []
@@ -680,38 +726,41 @@ class MultiRepositoryOrchestrator:
             existing_logs = existing_logs[-50:]
 
         # Save
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             json.dump(existing_logs, f, indent=2)
 
     def _generate_final_report(self):
         """Generate final orchestration report"""
         report = {
-            'end_time': datetime.now(UTC).isoformat(),
-            'total_pilots': len(self.pilots),
-            'final_health': {
-                'global_health': self.global_health,
-                'k_state': self.k_state,
-                'pillars_scores': self.pillars_scores,
-                'emergency_mode': self.emergency_mode
+            "end_time": datetime.now(UTC).isoformat(),
+            "total_pilots": len(self.pilots),
+            "final_health": {
+                "global_health": self.global_health,
+                "k_state": self.k_state,
+                "pillars_scores": self.pillars_scores,
+                "emergency_mode": self.emergency_mode,
             },
-            'haios_compliance': self._check_haios_compliance(),
-            'creator_attribution': {
-                'creator': 'Nguyễn Đức Cường (alpha_prime_omega)',
-                'framework': 'HYPERAI',
-                'verification_code': 4287
-            }
+            "haios_compliance": self._check_haios_compliance(),
+            "creator_attribution": {
+                "creator": "Nguyễn Đức Cường (alpha_prime_omega)",
+                "framework": "HYPERAI",
+                "verification_code": 4287,
+            },
         }
 
-        report_file = Path('logs/final_orchestration_report.json')
-        with open(report_file, 'w') as f:
+        report_file = Path("logs/final_orchestration_report.json")
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2)
 
         self.logger.info("📊 Final orchestration report saved")
-        self.logger.info(f"🧬 Global Health: {self.global_health:.1f}% | K-State: {self.k_state}")
+        self.logger.info(
+            f"🧬 Global Health: {self.global_health:.1f}% | K-State: {self.k_state}"
+        )
 
 
 class GitWorkflowState:
     """Git workflow state management"""
+
     CLEAN = "clean"
     MODIFIED = "modified"
     STAGED = "staged"
@@ -733,8 +782,8 @@ class AutonomousGitWorkflow:
     """
 
     def __init__(self):
-        self.repo_path = Path('.')
-        self.github_token = os.environ.get('GITHUB_TOKEN')
+        self.repo_path = Path(".")
+        self.github_token = os.environ.get("GITHUB_TOKEN")
         self.logger = self._setup_logging()
 
         # Load configurations
@@ -744,7 +793,9 @@ class AutonomousGitWorkflow:
         # Initialize GitHub API
         if self.github_token:
             self.gh = Github(auth=Auth.Token(self.github_token))
-            self.repo = self.gh.get_repo(os.environ.get('GITHUB_REPOSITORY', 'NguyenCuong1989/DAIOF-Framework'))
+            self.repo = self.gh.get_repo(
+                os.environ.get("GITHUB_REPOSITORY", "NguyenCuong1989/DAIOF-Framework")
+            )
 
         # State tracking
         self.last_commit_time = None
@@ -755,10 +806,10 @@ class AutonomousGitWorkflow:
         # HAIOS compliance tracking
         self.k_state = 1  # Always maintain K=1
         self.pillars_scores = {
-            'an_toan': 10.0,
-            'duong_dai': 10.0,
-            'tin_vao_so_lieu': 10.0,
-            'han_che_rui_ro': 10.0
+            "an_toan": 10.0,
+            "duong_dai": 10.0,
+            "tin_vao_so_lieu": 10.0,
+            "han_che_rui_ro": 10.0,
         }
 
         # Autonomous operation flags
@@ -775,11 +826,11 @@ class AutonomousGitWorkflow:
 
     def _setup_logging(self) -> logging.Logger:
         """Setup comprehensive logging"""
-        logger = logging.getLogger('DAIOF_Git_Workflow')
+        logger = logging.getLogger("DAIOF_Git_Workflow")
         logger.setLevel(logging.INFO)
 
         # File handler
-        log_file = self.repo_path / 'logs' / 'git_workflow.log'
+        log_file = self.repo_path / "logs" / "git_workflow.log"
         log_file.parent.mkdir(exist_ok=True)
 
         fh = logging.FileHandler(log_file)
@@ -791,7 +842,7 @@ class AutonomousGitWorkflow:
 
         # Formatter
         formatter = logging.Formatter(
-            '🧬 %(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "🧬 %(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
@@ -803,7 +854,7 @@ class AutonomousGitWorkflow:
 
     def _load_genome(self) -> Dict:
         """Load organism genome"""
-        genome_file = self.repo_path / '.github' / 'DIGITAL_ORGANISM_GENOME.yml'
+        genome_file = self.repo_path / ".github" / "DIGITAL_ORGANISM_GENOME.yml"
         if genome_file.exists():
             with open(genome_file) as f:
                 return yaml.safe_load(f)
@@ -813,21 +864,21 @@ class AutonomousGitWorkflow:
         """Load HAIOS configuration"""
         # This would load from consciousness files
         return {
-            'invariants': {
-                'attribution_immutable': True,
-                'safety_floor': 7.0,
-                'rollback_enabled': True,
-                'k_state': 1,
-                'pillars_compliance': True,
-                'multi_party_auth': True,
-                'audit_trail': True
+            "invariants": {
+                "attribution_immutable": True,
+                "safety_floor": 7.0,
+                "rollback_enabled": True,
+                "k_state": 1,
+                "pillars_compliance": True,
+                "multi_party_auth": True,
+                "audit_trail": True,
             },
-            'pillars': {
-                'an_toan': {'min': 7.0, 'weight': 0.4},
-                'duong_dai': {'min': 7.0, 'weight': 0.25},
-                'tin_vao_so_lieu': {'min': 7.0, 'weight': 0.2},
-                'han_che_rui_ro': {'min': 7.0, 'weight': 0.15}
-            }
+            "pillars": {
+                "an_toan": {"min": 7.0, "weight": 0.4},
+                "duong_dai": {"min": 7.0, "weight": 0.25},
+                "tin_vao_so_lieu": {"min": 7.0, "weight": 0.2},
+                "han_che_rui_ro": {"min": 7.0, "weight": 0.15},
+            },
         }
 
     def get_git_status(self) -> Dict[str, Any]:
@@ -835,14 +886,14 @@ class AutonomousGitWorkflow:
         try:
             # Basic status
             result = subprocess.run(
-                ['git', 'status', '--porcelain', '--branch'],
+                ["git", "status", "--porcelain", "--branch"],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
-            status_lines = result.stdout.strip().split('\n')
+            status_lines = result.stdout.strip().split("\n")
             branch_line = status_lines[0] if status_lines else ""
 
             # Parse branch info
@@ -853,38 +904,40 @@ class AutonomousGitWorkflow:
             remote_status = self._check_remote_status()
 
             return {
-                'branch': branch_info,
-                'modified_files': modified_files,
-                'remote_status': remote_status,
-                'state': self._determine_workflow_state(branch_info, modified_files, remote_status),
-                'timestamp': datetime.now(UTC).isoformat()
+                "branch": branch_info,
+                "modified_files": modified_files,
+                "remote_status": remote_status,
+                "state": self._determine_workflow_state(
+                    branch_info, modified_files, remote_status
+                ),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
             self.logger.error(f"Error getting git status: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def _parse_branch_info(self, branch_line: str) -> Dict[str, Any]:
         """Parse git branch information"""
         # ## branch-name...origin/branch-name [ahead 1, behind 2]
-        parts = branch_line.replace('## ', '').split()
+        parts = branch_line.replace("## ", "").split()
 
         if not parts:
-            return {'name': 'unknown'}
+            return {"name": "unknown"}
 
-        branch_name = parts[0].split('...')[0]
+        branch_name = parts[0].split("...")[0]
 
-        info = {'name': branch_name}
+        info = {"name": branch_name}
 
         if len(parts) > 1:
-            status_part = parts[1].strip('[]')
-            if 'ahead' in status_part or 'behind' in status_part:
-                status_items = status_part.split(', ')
+            status_part = parts[1].strip("[]")
+            if "ahead" in status_part or "behind" in status_part:
+                status_items = status_part.split(", ")
                 for item in status_items:
-                    if 'ahead' in item:
-                        info['ahead'] = int(item.split()[1])
-                    elif 'behind' in item:
-                        info['behind'] = int(item.split()[1])
+                    if "ahead" in item:
+                        info["ahead"] = int(item.split()[1])
+                    elif "behind" in item:
+                        info["behind"] = int(item.split()[1])
 
         return info
 
@@ -893,37 +946,38 @@ class AutonomousGitWorkflow:
         try:
             # Fetch latest
             subprocess.run(
-                ['git', 'fetch', 'origin'],
+                ["git", "fetch", "origin"],
                 cwd=self.repo_path,
                 capture_output=True,
-                timeout=30
+                timeout=30,
             )
 
             # Check if we're behind/ahead
             result = subprocess.run(
-                ['git', 'rev-list', 'HEAD...origin/main', '--count'],
+                ["git", "rev-list", "HEAD...origin/main", "--count"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if result.returncode == 0:
                 commits_diff = int(result.stdout.strip())
-                return {'commits_behind': commits_diff}
+                return {"commits_behind": commits_diff}
             else:
-                return {'error': 'Could not check remote status'}
+                return {"error": "Could not check remote status"}
 
         except Exception as e:
-            return {'error': str(e)}
+            return {"error": str(e)}
 
-    def _determine_workflow_state(self, branch_info: Dict, modified_files: List[str],
-                                remote_status: Dict) -> str:
+    def _determine_workflow_state(
+        self, branch_info: Dict, modified_files: List[str], remote_status: Dict
+    ) -> str:
         """Determine current workflow state"""
         if modified_files:
             return GitWorkflowState.MODIFIED
-        elif remote_status.get('commits_behind', 0) > 0:
+        elif remote_status.get("commits_behind", 0) > 0:
             return GitWorkflowState.BEHIND
-        elif branch_info.get('ahead', 0) > 0:
+        elif branch_info.get("ahead", 0) > 0:
             return GitWorkflowState.AHEAD
         else:
             return GitWorkflowState.CLEAN
@@ -933,22 +987,20 @@ class AutonomousGitWorkflow:
         try:
             # Check HAIOS invariants before commit
             if not self._check_haios_compliance():
-                self.logger.warning("❌ HAIOS compliance check failed - aborting commit")
+                self.logger.warning(
+                    "❌ HAIOS compliance check failed - aborting commit"
+                )
                 return False
 
             # Get status
             status = self.get_git_status()
 
-            if not status.get('modified_files'):
+            if not status.get("modified_files"):
                 self.logger.info("ℹ️ No modified files to commit")
                 return True
 
             # Stage all changes
-            subprocess.run(
-                ['git', 'add', '-A'],
-                cwd=self.repo_path,
-                check=True
-            )
+            subprocess.run(["git", "add", "-A"], cwd=self.repo_path, check=True)
 
             # Generate commit message if not provided
             if not message:
@@ -959,33 +1011,31 @@ class AutonomousGitWorkflow:
 
             # Commit
             subprocess.run(
-                ['git', 'commit', '-m', full_message],
-                cwd=self.repo_path,
-                check=True
+                ["git", "commit", "-m", full_message], cwd=self.repo_path, check=True
             )
 
             self.last_commit_time = datetime.now(UTC)
             self.logger.info(f"✅ Autonomous commit completed: {message}")
 
             # Update health metrics
-            self._update_health_metrics('commit_success')
+            self._update_health_metrics("commit_success")
 
             return True
 
         except Exception as e:
             self.logger.error(f"❌ Autonomous commit failed: {e}")
-            self._update_health_metrics('commit_failure')
+            self._update_health_metrics("commit_failure")
             return False
 
     def _generate_commit_message(self, status: Dict) -> str:
         """Generate intelligent commit message"""
-        modified_files = status.get('modified_files', [])
+        modified_files = status.get("modified_files", [])
         file_count = len(modified_files)
 
         # Analyze file types
-        py_files = [f for f in modified_files if f.endswith('.py')]
-        md_files = [f for f in modified_files if f.endswith('.md')]
-        json_files = [f for f in modified_files if f.endswith('.json')]
+        py_files = [f for f in modified_files if f.endswith(".py")]
+        md_files = [f for f in modified_files if f.endswith(".md")]
+        json_files = [f for f in modified_files if f.endswith(".json")]
 
         # Generate contextual message
         if py_files and md_files:
@@ -1004,10 +1054,10 @@ class AutonomousGitWorkflow:
         try:
             # Check if we have commits to push
             result = subprocess.run(
-                ['git', 'log', 'origin/main..HEAD', '--oneline'],
+                ["git", "log", "origin/main..HEAD", "--oneline"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if not result.stdout.strip():
@@ -1016,71 +1066,74 @@ class AutonomousGitWorkflow:
 
             # Attempt push
             push_result = subprocess.run(
-                ['git', 'push', 'origin', 'HEAD'],
+                ["git", "push", "origin", "HEAD"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if push_result.returncode == 0:
                 self.logger.info("✅ Autonomous push completed successfully")
-                self._update_health_metrics('push_success')
+                self._update_health_metrics("push_success")
                 return True
             else:
                 # Handle push failure (likely conflicts)
-                if 'non-fast-forward' in push_result.stderr or 'Updates were rejected' in push_result.stderr:
-                    self.logger.warning("⚠️ Push rejected - attempting conflict resolution")
+                if (
+                    "non-fast-forward" in push_result.stderr
+                    or "Updates were rejected" in push_result.stderr
+                ):
+                    self.logger.warning(
+                        "⚠️ Push rejected - attempting conflict resolution"
+                    )
                     return self._resolve_push_conflicts()
                 else:
                     self.logger.error(f"❌ Push failed: {push_result.stderr}")
-                    self._update_health_metrics('push_failure')
+                    self._update_health_metrics("push_failure")
                     return False
 
         except Exception as e:
             self.logger.error(f"❌ Autonomous push failed: {e}")
-            self._update_health_metrics('push_failure')
+            self._update_health_metrics("push_failure")
             return False
 
     def _resolve_push_conflicts(self) -> bool:
         """Resolve push conflicts autonomously"""
         try:
             # Fetch latest changes
-            subprocess.run(['git', 'fetch', 'origin'], cwd=self.repo_path, check=True)
+            subprocess.run(["git", "fetch", "origin"], cwd=self.repo_path, check=True)
 
             # Attempt rebase
             rebase_result = subprocess.run(
-                ['git', 'rebase', 'origin/main'],
+                ["git", "rebase", "origin/main"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if rebase_result.returncode == 0:
                 # Rebase successful, push
                 push_result = subprocess.run(
-                    ['git', 'push', 'origin', 'HEAD'],
-                    cwd=self.repo_path,
-                    check=True
+                    ["git", "push", "origin", "HEAD"], cwd=self.repo_path, check=True
                 )
                 self.logger.info("✅ Conflict resolved via rebase and push")
                 return True
             else:
                 # Rebase failed, abort and merge instead
-                subprocess.run(['git', 'rebase', '--abort'], cwd=self.repo_path)
+                subprocess.run(["git", "rebase", "--abort"], cwd=self.repo_path)
 
                 # Try merge
                 merge_result = subprocess.run(
-                    ['git', 'merge', 'origin/main', '--no-edit'],
+                    ["git", "merge", "origin/main", "--no-edit"],
                     cwd=self.repo_path,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
                 if merge_result.returncode == 0:
                     push_result = subprocess.run(
-                        ['git', 'push', 'origin', 'HEAD'],
+                        ["git", "push", "origin", "HEAD"],
                         cwd=self.repo_path,
-                        check=True
+                        check=True,
                     )
                     self.logger.info("✅ Conflict resolved via merge and push")
                     return True
@@ -1097,45 +1150,45 @@ class AutonomousGitWorkflow:
         try:
             # Check if we're behind
             status = self.get_git_status()
-            if status.get('remote_status', {}).get('commits_behind', 0) == 0:
+            if status.get("remote_status", {}).get("commits_behind", 0) == 0:
                 self.logger.info("ℹ️ Repository is up to date")
                 return True
 
             # Attempt pull with rebase
             pull_result = subprocess.run(
-                ['git', 'pull', '--rebase', 'origin', 'main'],
+                ["git", "pull", "--rebase", "origin", "main"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if pull_result.returncode == 0:
                 self.logger.info("✅ Autonomous pull completed successfully")
-                self._update_health_metrics('pull_success')
+                self._update_health_metrics("pull_success")
                 return True
             else:
                 # Try merge instead
-                subprocess.run(['git', 'rebase', '--abort'], cwd=self.repo_path)
+                subprocess.run(["git", "rebase", "--abort"], cwd=self.repo_path)
 
                 merge_result = subprocess.run(
-                    ['git', 'pull', 'origin', 'main'],
+                    ["git", "pull", "origin", "main"],
                     cwd=self.repo_path,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
                 if merge_result.returncode == 0:
                     self.logger.info("✅ Pull completed with merge")
-                    self._update_health_metrics('pull_success')
+                    self._update_health_metrics("pull_success")
                     return True
                 else:
                     self.logger.error(f"❌ Pull failed: {merge_result.stderr}")
-                    self._update_health_metrics('pull_failure')
+                    self._update_health_metrics("pull_failure")
                     return False
 
         except Exception as e:
             self.logger.error(f"❌ Autonomous pull failed: {e}")
-            self._update_health_metrics('pull_failure')
+            self._update_health_metrics("pull_failure")
             return False
 
     def autonomous_branch_management(self) -> bool:
@@ -1143,33 +1196,35 @@ class AutonomousGitWorkflow:
         try:
             # Get all branches
             result = subprocess.run(
-                ['git', 'branch', '-a'],
+                ["git", "branch", "-a"],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
-            branches = [line.strip('* ') for line in result.stdout.split('\n') if line.strip()]
+            branches = [
+                line.strip("* ") for line in result.stdout.split("\n") if line.strip()
+            ]
 
             # Clean up merged branches
             for branch in branches:
-                if branch.startswith('remotes/origin/'):
+                if branch.startswith("remotes/origin/"):
                     continue  # Skip remote branches
 
-                if branch in ['main', 'master']:
+                if branch in ["main", "master"]:
                     continue  # Don't delete main branches
 
                 # Check if branch is merged
                 merged_result = subprocess.run(
-                    ['git', 'branch', '--merged', branch],
+                    ["git", "branch", "--merged", branch],
                     cwd=self.repo_path,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
                 if branch in merged_result.stdout:
                     # Safe to delete
-                    subprocess.run(['git', 'branch', '-d', branch], cwd=self.repo_path)
+                    subprocess.run(["git", "branch", "-d", branch], cwd=self.repo_path)
                     self.logger.info(f"🗑️ Cleaned up merged branch: {branch}")
 
             self.logger.info("✅ Branch management completed")
@@ -1199,7 +1254,7 @@ class AutonomousGitWorkflow:
 
             # Invariant 5: 4 Pillars compliance
             for pillar, score in self.pillars_scores.items():
-                if score < self.haios_config['pillars'][pillar]['min']:
+                if score < self.haios_config["pillars"][pillar]["min"]:
                     return False
 
             return True
@@ -1213,14 +1268,18 @@ class AutonomousGitWorkflow:
         self.health_metrics[operation] = self.health_metrics.get(operation, 0) + 1
 
         # Update pillars scores based on operation success/failure
-        if operation.endswith('_success'):
+        if operation.endswith("_success"):
             # Increase scores slightly
             for pillar in self.pillars_scores:
-                self.pillars_scores[pillar] = min(10.0, self.pillars_scores[pillar] + 0.1)
-        elif operation.endswith('_failure'):
+                self.pillars_scores[pillar] = min(
+                    10.0, self.pillars_scores[pillar] + 0.1
+                )
+        elif operation.endswith("_failure"):
             # Decrease scores
             for pillar in self.pillars_scores:
-                self.pillars_scores[pillar] = max(7.0, self.pillars_scores[pillar] - 0.5)
+                self.pillars_scores[pillar] = max(
+                    7.0, self.pillars_scores[pillar] - 0.5
+                )
 
     def generate_workflow_tasks(self) -> List[Dict]:
         """Generate autonomous workflow tasks"""
@@ -1228,41 +1287,49 @@ class AutonomousGitWorkflow:
 
         # Analyze current state
         status = self.get_git_status()
-        state = status.get('state')
+        state = status.get("state")
 
         # Generate tasks based on state
         if state == GitWorkflowState.MODIFIED and self.auto_commit_enabled:
-            tasks.append({
-                'type': 'commit',
-                'priority': 'high',
-                'description': 'Commit modified files autonomously',
-                'action': self.autonomous_commit
-            })
+            tasks.append(
+                {
+                    "type": "commit",
+                    "priority": "high",
+                    "description": "Commit modified files autonomously",
+                    "action": self.autonomous_commit,
+                }
+            )
 
         if state == GitWorkflowState.AHEAD and self.auto_push_enabled:
-            tasks.append({
-                'type': 'push',
-                'priority': 'high',
-                'description': 'Push commits to remote repository',
-                'action': self.autonomous_push
-            })
+            tasks.append(
+                {
+                    "type": "push",
+                    "priority": "high",
+                    "description": "Push commits to remote repository",
+                    "action": self.autonomous_push,
+                }
+            )
 
         if state == GitWorkflowState.BEHIND:
-            tasks.append({
-                'type': 'pull',
-                'priority': 'medium',
-                'description': 'Pull latest changes from remote',
-                'action': self.autonomous_pull
-            })
+            tasks.append(
+                {
+                    "type": "pull",
+                    "priority": "medium",
+                    "description": "Pull latest changes from remote",
+                    "action": self.autonomous_pull,
+                }
+            )
 
         # Regular maintenance tasks
         if self.auto_branch_management:
-            tasks.append({
-                'type': 'branch_cleanup',
-                'priority': 'low',
-                'description': 'Clean up merged branches',
-                'action': self.autonomous_branch_management
-            })
+            tasks.append(
+                {
+                    "type": "branch_cleanup",
+                    "priority": "low",
+                    "description": "Clean up merged branches",
+                    "action": self.autonomous_branch_management,
+                }
+            )
 
         return tasks
 
@@ -1276,54 +1343,62 @@ class AutonomousGitWorkflow:
         tasks = self.generate_workflow_tasks()
 
         results = {
-            'cycle_start': cycle_start.isoformat(),
-            'tasks_generated': len(tasks),
-            'tasks_completed': 0,
-            'tasks_failed': 0,
-            'results': []
+            "cycle_start": cycle_start.isoformat(),
+            "tasks_generated": len(tasks),
+            "tasks_completed": 0,
+            "tasks_failed": 0,
+            "results": [],
         }
 
         # Execute tasks in priority order
-        priority_order = {'high': 0, 'medium': 1, 'low': 2}
-        tasks.sort(key=lambda t: priority_order.get(t['priority'], 3))
+        priority_order = {"high": 0, "medium": 1, "low": 2}
+        tasks.sort(key=lambda t: priority_order.get(t["priority"], 3))
 
         for task in tasks:
             try:
                 self.logger.info(f"🚀 Executing {task['type']}: {task['description']}")
 
-                success = task['action']()
+                success = task["action"]()
 
                 if success:
-                    results['tasks_completed'] += 1
-                    results['results'].append({
-                        'task': task['type'],
-                        'status': 'success',
-                        'description': task['description']
-                    })
+                    results["tasks_completed"] += 1
+                    results["results"].append(
+                        {
+                            "task": task["type"],
+                            "status": "success",
+                            "description": task["description"],
+                        }
+                    )
                 else:
-                    results['tasks_failed'] += 1
-                    results['results'].append({
-                        'task': task['type'],
-                        'status': 'failed',
-                        'description': task['description']
-                    })
+                    results["tasks_failed"] += 1
+                    results["results"].append(
+                        {
+                            "task": task["type"],
+                            "status": "failed",
+                            "description": task["description"],
+                        }
+                    )
 
             except Exception as e:
                 self.logger.error(f"❌ Task {task['type']} failed: {e}")
-                results['tasks_failed'] += 1
-                results['results'].append({
-                    'task': task['type'],
-                    'status': 'error',
-                    'description': task['description'],
-                    'error': str(e)
-                })
+                results["tasks_failed"] += 1
+                results["results"].append(
+                    {
+                        "task": task["type"],
+                        "status": "error",
+                        "description": task["description"],
+                        "error": str(e),
+                    }
+                )
 
         # Update cycle completion
-        results['cycle_end'] = datetime.now(UTC).isoformat()
-        results['duration_seconds'] = (datetime.now(UTC) - cycle_start).total_seconds()
+        results["cycle_end"] = datetime.now(UTC).isoformat()
+        results["duration_seconds"] = (datetime.now(UTC) - cycle_start).total_seconds()
 
         # Log final status
-        self.logger.info(f"✅ Workflow cycle completed: {results['tasks_completed']} success, {results['tasks_failed']} failed")
+        self.logger.info(
+            f"✅ Workflow cycle completed: {results['tasks_completed']} success, {results['tasks_failed']} failed"
+        )
 
         return results
 
@@ -1331,7 +1406,7 @@ class AutonomousGitWorkflow:
         """Run continuous autonomous workflow"""
         self.logger.info("🧬 DAIOF Autonomous Git Workflow - CONTINUOUS MODE ACTIVATED")
         self.logger.info(f"⏱️  Check interval: {interval} seconds")
-        self.logger.info("="*80)
+        self.logger.info("=" * 80)
 
         cycle_count = 0
 
@@ -1340,7 +1415,9 @@ class AutonomousGitWorkflow:
                 cycle_count += 1
                 cycle_start = datetime.now(UTC)
 
-                self.logger.info(f"\n🔄 Cycle {cycle_count} - {cycle_start.strftime('%H:%M:%S UTC')}")
+                self.logger.info(
+                    f"\n🔄 Cycle {cycle_count} - {cycle_start.strftime('%H:%M:%S UTC')}"
+                )
 
                 # Execute workflow cycle
                 results = self.execute_workflow_cycle()
@@ -1348,8 +1425,12 @@ class AutonomousGitWorkflow:
                 # Log cycle summary
                 self.logger.info(f"📊 Cycle Summary:")
                 self.logger.info(f"   Duration: {results['duration_seconds']:.1f}s")
-                self.logger.info(f"   Tasks: {results['tasks_completed']}/{results['tasks_generated']} completed")
-                self.logger.info(f"   Health: K={self.k_state}, Safety={min(self.pillars_scores.values()):.1f}")
+                self.logger.info(
+                    f"   Tasks: {results['tasks_completed']}/{results['tasks_generated']} completed"
+                )
+                self.logger.info(
+                    f"   Health: K={self.k_state}, Safety={min(self.pillars_scores.values()):.1f}"
+                )
 
                 # Removed file saving to eliminate timing disruptions - data flows to unified orchestrator only
                 # self._save_workflow_log(results)
@@ -1374,7 +1455,7 @@ class AutonomousGitWorkflow:
 
     def _save_workflow_log(self, results: Dict):
         """Save workflow execution log"""
-        log_dir = self.repo_path / 'logs'
+        log_dir = self.repo_path / "logs"
         log_dir.mkdir(exist_ok=True)
 
         log_file = log_dir / f"workflow_{datetime.now(UTC).strftime('%Y%m%d')}.json"
@@ -1393,47 +1474,49 @@ class AutonomousGitWorkflow:
             existing_logs = existing_logs[-100:]
 
         # Save
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             json.dump(existing_logs, f, indent=2)
 
     def _generate_final_report(self):
         """Generate final workflow report"""
         report = {
-            'end_time': datetime.now(UTC).isoformat(),
-            'total_cycles': getattr(self, 'cycle_count', 0),
-            'final_health': {
-                'k_state': self.k_state,
-                'pillars_scores': self.pillars_scores,
-                'health_metrics': self.health_metrics
+            "end_time": datetime.now(UTC).isoformat(),
+            "total_cycles": getattr(self, "cycle_count", 0),
+            "final_health": {
+                "k_state": self.k_state,
+                "pillars_scores": self.pillars_scores,
+                "health_metrics": self.health_metrics,
             },
-            'haios_compliance': self._check_haios_compliance(),
-            'creator_attribution': {
-                'creator': 'Nguyễn Đức Cường (alpha_prime_omega)',
-                'framework': 'HYPERAI',
-                'verification_code': 4287
-            }
+            "haios_compliance": self._check_haios_compliance(),
+            "creator_attribution": {
+                "creator": "Nguyễn Đức Cường (alpha_prime_omega)",
+                "framework": "HYPERAI",
+                "verification_code": 4287,
+            },
         }
 
-        report_file = self.repo_path / 'logs' / 'final_workflow_report.json'
-        with open(report_file, 'w') as f:
+        report_file = self.repo_path / "logs" / "final_workflow_report.json"
+        with open(report_file, "w") as f:
             json.dump(report, f, indent=2)
 
         self.logger.info("📊 Final workflow report saved")
-        self.logger.info(f"🧬 K-State: {self.k_state} | HAIOS Compliant: {report['haios_compliance']}")
+        self.logger.info(
+            f"🧬 K-State: {self.k_state} | HAIOS Compliant: {report['haios_compliance']}"
+        )
 
 
 def main():
     """Main entry point"""
-    if len(sys.argv) > 1 and sys.argv[1] == 'single':
+    if len(sys.argv) > 1 and sys.argv[1] == "single":
         # Run single repository autonomous workflow
         workflow = AutonomousGitWorkflow()
 
         if len(sys.argv) > 2:
             command = sys.argv[2]
-            if command == 'status':
+            if command == "status":
                 status = workflow.get_git_status()
                 print(json.dumps(status, indent=2))
-            elif command == 'cycle':
+            elif command == "cycle":
                 results = workflow.execute_workflow_cycle()
                 print(json.dumps(results, indent=2))
         else:
@@ -1444,5 +1527,5 @@ def main():
         orchestrator.run_continuous_orchestration(interval=300)  # Check every 5 minutes
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
