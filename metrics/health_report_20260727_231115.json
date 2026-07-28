@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-07-27T23:11:05.105242",
+  "overall_health": 0.8,
+  "vital_signs": {
+    "contribution_streak": {
+      "value": 4,
+      "unit": "days",
+      "healthy_range": [
+        5,
+        365
+      ],
+      "status": "\u26a0\ufe0f",
+      "is_healthy": false
+    },
+    "community_engagement": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "issues": 6,
+        "prs": 7,
+        "comments": 54
+      },
+      "healthy_range": [
+        0.7,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "code_quality": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "has_ci": true,
+        "has_tests": true,
+        "has_docs": true,
+        "has_contributing": true,
+        "has_license": true
+      },
+      "healthy_range": [
+        0.8,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "response_time": {
+      "value": 0.0,
+      "unit": "hours",
+      "sample_size": 4,
+      "healthy_range": [
+        0,
+        24
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "growth_metrics": {
+      "current": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 4,
+        "subscribers": 0
+      },
+      "growth": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 4,
+        "subscribers": 0
+      },
+      "status": "\u2705",
+      "is_healthy": true
+    }
+  },
+  "warnings": [
+    "Contribution streak (4 days) below healthy minimum (5 days)"
+  ],
+  "recommendations": [
+    "\ud83d\udca1 Increase commit frequency to maintain organism vitality",
+    "\ud83d\udca1 Stars (1) below first week target (50). Execute launch strategy."
+  ]
+}
