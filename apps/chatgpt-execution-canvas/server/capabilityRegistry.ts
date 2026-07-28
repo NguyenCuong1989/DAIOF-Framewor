@@ -1,4 +1,4 @@
-import { skillCatalog, type Mission } from './skillRouter.js';
+import { routeSkillChain, skillCatalog, type Mission } from './skillRouter.js';
 
 export type CapabilityKind = 'native' | 'skill' | 'connector' | 'runtime';
 export type CapabilityState = 'ready' | 'configured' | 'degraded' | 'unavailable';
@@ -36,10 +36,18 @@ const skills: CapabilityDescriptor[] = skillCatalog.map(skill => ({
   evidence: `skill:${skill.id}`,
 }));
 
+const skillsById = new Map(skills.map(skill => [skill.id, skill]));
+
 export const capabilityRegistry: readonly CapabilityDescriptor[] = [...native, ...connectors, ...skills];
 
 export function capabilitiesForMission(mission: Mission): CapabilityDescriptor[] {
-  return capabilityRegistry.filter(capability => capability.missions.includes(mission));
+  const platformCapabilities = [...native, ...connectors].filter(capability => capability.missions.includes(mission));
+  const routedSkills = routeSkillChain(mission).map(skill => {
+    const capability = skillsById.get(skill.id);
+    if (!capability) throw new Error(`CAPABILITY_NOT_REGISTERED:${skill.id}`);
+    return capability;
+  });
+  return [...platformCapabilities, ...routedSkills];
 }
 
 export function capabilityHealth() {
