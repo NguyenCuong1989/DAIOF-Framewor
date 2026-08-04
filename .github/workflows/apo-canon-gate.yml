@@ -42,8 +42,8 @@ jobs:
 
       - name: Run canonical gate
         run: |
+          set +e
           ./.apo/bin/apo-canon-gate .apo/state/workspace-state.json
-
-      - name: Verify gate exit code
-        run: |
-          test "$(cat /tmp/gate_exit 2>/dev/null)" = 0
+          EXIT=$?
+          echo "APO_GATE_EXIT=$EXIT"
+          exit $EXIT
