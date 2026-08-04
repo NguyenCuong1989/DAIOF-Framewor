@@ -30,10 +30,12 @@ def discover_directories(root: Path) -> list[dict]:
         if entry.is_dir() and not entry.name.startswith("."):
             readme = entry / "README.md"
             if readme.exists():
-                dirs.append({
-                    "name": entry.name,
-                    "readmePath": str(readme.relative_to(root)),
-                })
+                dirs.append(
+                    {
+                        "name": entry.name,
+                        "readmePath": str(readme.relative_to(root)),
+                    }
+                )
     return dirs
 
 
