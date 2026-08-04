@@ -162,6 +162,9 @@ simulation_results/
 *.pkl
 *.pickle
 
+# Node.js dependencies
+node_modules/
+
 # APΩ canonical runtime: keep sources and config, ignore generated state
 .apo/state/workspace-state.json
 .apo/bin/apo-canon-gate
