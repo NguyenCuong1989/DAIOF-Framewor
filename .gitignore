@@ -161,3 +161,14 @@ ecosystem_data/
 simulation_results/
 *.pkl
 *.pickle
+
+# APΩ canonical runtime: keep sources and config, ignore generated state
+.apo/state/workspace-state.json
+.apo/bin/apo-canon-gate
+*.cpuprofile
+index.js.bak.*
+node_modules.injected_*/
+
+# Allow canonical VS Code: launch and task bindings
+!.vscode/launch.json
+!.vscode/tasks.json

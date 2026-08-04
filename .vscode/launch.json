@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "APΩ Canonical Launch",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/.apo/bin/launch_canonical.py",
+      "program": "${workspaceFolder}/index.js",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "APΩ: Canonical Preflight",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "autoAttachChildProcesses": false,
+      "restart": false,
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3011",
+        "APO_WORKSPACE": "${workspaceFolder}",
+        "APO_PORT": "3011",
+        "APO_PROGRAM": "index.js",
+        "NODE_OPTIONS": "",
+        "VSCODE_INSPECTOR_OPTIONS": "",
+        "VSCODE_INSPECTOR_IPC": "",
+        "VSCODE_JS_DEBUG_OPTIONS": "",
+        "JS_DEBUG_USEPREVIEW": ""
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}
