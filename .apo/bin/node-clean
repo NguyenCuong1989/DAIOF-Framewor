@@ -1,0 +1,10 @@
+#!/bin/sh
+# APΩ Node clean launcher — strips VS Code: debugger / inspector hooks
+# before delegating to the system node binary.
+exec \
+  env -u NODE_OPTIONS \
+      -u VSCODE_INSPECTOR_OPTIONS \
+      -u VSCODE_INSPECTOR_IPC \
+      -u VSCODE_JS_DEBUG_OPTIONS \
+      -u JS_DEBUG_USEPREVIEW \
+      node "$@"

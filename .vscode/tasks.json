@@ -1,0 +1,86 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "APΩ: Build Canon Gate",
+      "type": "shell",
+      "command": "/usr/bin/clang++",
+      "args": [
+        "-std=c++20",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+        "-I/opt/homebrew/opt/nlohmann-json/include",
+        "${workspaceFolder}/.apo/canon/apo_load_state.cpp",
+        "-o",
+        "${workspaceFolder}/.apo/bin/apo-canon-gate"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "NODE_OPTIONS": "",
+          "VSCODE_INSPECTOR_OPTIONS": "",
+          "VSCODE_INSPECTOR_IPC": "",
+          "VSCODE_JS_DEBUG_OPTIONS": ""
+        }
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "APΩ: Extract Workspace State",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/.apo/canon/extractor.py",
+        "${workspaceFolder}",
+        "${workspaceFolder}/.apo/state/workspace-state.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "NODE_OPTIONS": "",
+          "VSCODE_INSPECTOR_OPTIONS": "",
+          "VSCODE_INSPECTOR_IPC": "",
+          "VSCODE_JS_DEBUG_OPTIONS": ""
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "APΩ: Execute Canon Gate",
+      "type": "shell",
+      "command": "${workspaceFolder}/.apo/bin/apo-canon-gate",
+      "args": [
+        "${workspaceFolder}/.apo/state/workspace-state.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "NODE_OPTIONS": "",
+          "VSCODE_INSPECTOR_OPTIONS": "",
+          "VSCODE_INSPECTOR_IPC": "",
+          "VSCODE_JS_DEBUG_OPTIONS": ""
+        }
+      },
+      "dependsOn": [
+        "APΩ: Build Canon Gate",
+        "APΩ: Extract Workspace State"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "APΩ: Canonical Preflight",
+      "dependsOn": [
+        "APΩ: Execute Canon Gate"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    }
+  ]
+}
