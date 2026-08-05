@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-08-05T18:55:04.645446",
+  "overall_health": 1.0,
+  "vital_signs": {
+    "contribution_streak": {
+      "value": 13,
+      "unit": "days",
+      "healthy_range": [
+        5,
+        365
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "community_engagement": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "issues": 4,
+        "prs": 10,
+        "comments": 79
+      },
+      "healthy_range": [
+        0.7,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "code_quality": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "has_ci": true,
+        "has_tests": true,
+        "has_docs": true,
+        "has_contributing": true,
+        "has_license": true
+      },
+      "healthy_range": [
+        0.8,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "response_time": {
+      "value": 3.4,
+      "unit": "hours",
+      "sample_size": 10,
+      "healthy_range": [
+        0,
+        24
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "growth_metrics": {
+      "current": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 1,
+        "subscribers": 0
+      },
+      "growth": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 1,
+        "subscribers": 0
+      },
+      "status": "\u2705",
+      "is_healthy": true
+    }
+  },
+  "warnings": [],
+  "recommendations": [
+    "\ud83d\udca1 Stars (1) below first week target (50). Execute launch strategy."
+  ]
+}
