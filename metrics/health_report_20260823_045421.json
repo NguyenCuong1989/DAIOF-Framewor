@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-08-23T04:53:39.916603",
+  "overall_health": 1.0,
+  "vital_signs": {
+    "contribution_streak": {
+      "error": "HTTPSConnectionPool(host='api.github.com', port=443): Max retries exceeded with url: /repos/NguyenCuong1989/DAIOF-Framewor/commits?since=2026-07-24T04%3A53%3A39Z (Caused by ResponseError('too many 504 error responses'))",
+      "status": "\u274c"
+    },
+    "community_engagement": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "issues": 0,
+        "prs": 10,
+        "comments": 60
+      },
+      "healthy_range": [
+        0.7,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "code_quality": {
+      "value": 1.0,
+      "unit": "score",
+      "details": {
+        "has_ci": true,
+        "has_tests": true,
+        "has_docs": true,
+        "has_contributing": true,
+        "has_license": true
+      },
+      "healthy_range": [
+        0.8,
+        1.0
+      ],
+      "status": "\u2705",
+      "is_healthy": true
+    },
+    "response_time": {
+      "error": "HTTPSConnectionPool(host='api.github.com', port=443): Max retries exceeded with url: /repos/NguyenCuong1989/DAIOF-Framewor/issues?state=closed (Caused by ResponseError('too many 504 error responses'))",
+      "status": "\u274c"
+    },
+    "growth_metrics": {
+      "current": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 1,
+        "subscribers": 0
+      },
+      "growth": {
+        "stars": 1,
+        "forks": 0,
+        "watchers": 1,
+        "open_issues": 1,
+        "subscribers": 0
+      },
+      "status": "\u2705",
+      "is_healthy": true
+    }
+  },
+  "warnings": [],
+  "recommendations": [
+    "\ud83d\udca1 Stars (1) below first week target (50). Execute launch strategy."
+  ]
+}
