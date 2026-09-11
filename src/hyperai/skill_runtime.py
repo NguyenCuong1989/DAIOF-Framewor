@@ -19,8 +19,12 @@ class Skill:
     name: str
     trigger: str
     handler: Callable[[Any], Any]
+    source: str = "local"
     availability: str = "available"
     side_effect_class: str = "none"
+    permission_class: str = "none"
+    version: str = "1.0.0"
+    provenance: str = "runtime"
     status: SkillStatus = SkillStatus.DISCOVERED
 
 
@@ -49,6 +53,8 @@ class SkillRegistry:
         return skill
 
     def get(self, skill_id: str):
+        if skill_id not in self._skills:
+            raise KeyError(f"unknown skill: {skill_id}")
         return self._skills[skill_id]
 
     def discover(self, task: str):
@@ -68,10 +74,17 @@ class CapabilityRouter:
         self.registry = registry
 
     def select(self, task: str):
+        terms = set(task.lower().split())
         candidates = [s for s in self.registry.discover(task) if s.availability == "available"]
         if not candidates:
             raise LookupError(f"no available capability for task: {task}")
-        candidates.sort(key=lambda s: (s.side_effect_class != "none", len(s.trigger)))
+        candidates.sort(
+            key=lambda s: (
+                -len(terms & set(s.trigger.lower().split())),
+                s.side_effect_class != "none",
+                len(s.trigger),
+            )
+        )
         selected = candidates[:1]
         for skill in selected:
             skill.status = SkillStatus.SELECTED
@@ -85,17 +98,42 @@ class ChainExecutor:
     def invoke(self, skill_id: str, value: Any, verify: bool = True, input_refs=None):
         skill = self.registry.get(skill_id)
         run_id = str(uuid4())
+        refs = list(input_refs or [])
         try:
             skill.status = SkillStatus.INVOKED
             output = skill.handler(value)
         except Exception as exc:
             skill.status = SkillStatus.FAILED
-            return SkillResult(skill_id, run_id, SkillStatus.FAILED, value, input_refs=list(input_refs or []), error_class=type(exc).__name__)
+            return SkillResult(
+                skill_id=skill_id,
+                run_id=run_id,
+                status=SkillStatus.FAILED,
+                input=value,
+                input_refs=refs,
+                error_class=type(exc).__name__,
+            )
         skill.status = SkillStatus.RETURNED
         if not verify:
-            return SkillResult(skill_id, run_id, SkillStatus.RETURNED, value, output, list(input_refs or []))
+            return SkillResult(
+                skill_id=skill_id,
+                run_id=run_id,
+                status=SkillStatus.RETURNED,
+                input=value,
+                output=output,
+                input_refs=refs,
+            )
         skill.status = SkillStatus.VERIFIED
-        return SkillResult(skill_id, run_id, SkillStatus.VERIFIED, value, output, list(input_refs or []), [run_id], [run_id], next_eligible=True)
+        return SkillResult(
+            skill_id=skill_id,
+            run_id=run_id,
+            status=SkillStatus.VERIFIED,
+            input=value,
+            output=output,
+            input_refs=refs,
+            output_refs=[run_id],
+            evidence_refs=[run_id],
+            next_eligible=True,
+        )
 
     def run(self, skill_ids, value):
         results = []
