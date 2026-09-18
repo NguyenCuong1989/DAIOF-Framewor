@@ -59,6 +59,10 @@ jobs:
           echo "🧬 Starting Real-Time Autonomous Task Generator"
           echo "⏱️  Interval: ${INTERVAL}s | Duration: ${DURATION}min"
           
+          # The task generator can commit generated changes; establish deterministic identity first.
+          git config user.name "DAIOF Organism"
+          git config user.email "organism@daiof-framework.dev"
+
           # The generator is intentionally continuous; timeout is the bounded-run control.
           # Only the expected timeout status (124) is accepted. Other failures propagate.
           timeout "${DURATION}m" python3 .github/scripts/realtime_task_generator.py
