@@ -2,8 +2,8 @@ name: 🔄 Real-Time Autonomous Task Generation
 
 on:
   schedule:
-    # Every minute - continuous operation
-    - cron: '* * * * *'
+    # One bounded run per five minutes; concurrency prevents overlapping runners.
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       interval:
@@ -21,6 +21,10 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+
+concurrency:
+  group: realtime-autonomous-tasks
+  cancel-in-progress: true
 
 jobs:
   realtime_tasks:
@@ -55,10 +59,42 @@ jobs:
           echo "🧬 Starting Real-Time Autonomous Task Generator"
           echo "⏱️  Interval: ${INTERVAL}s | Duration: ${DURATION}min"
           
-          # Run for specified duration
-          timeout ${DURATION}m python3 .github/scripts/realtime_task_generator.py || {
-            echo "✅ Task generator completed normally"
-          }
+          # The task generator can commit generated changes; establish deterministic identity first.
+          git config user.name "DAIOF Organism"
+          git config user.email "organism@daiof-framework.dev"
+
+          # The generator is intentionally continuous; timeout is the bounded-run control.
+          # Only the expected timeout status (124) is accepted. Other failures propagate.
+          timeout "${DURATION}m" python3 .github/scripts/realtime_task_generator.py
+          status=$?
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            echo "❌ Task generator failed with exit code $status"
+            exit "$status"
+          fi
+
+          LOG_FILE="logs/tasks_$(date -u +%Y%m%d).json"
+          if [ ! -f "$LOG_FILE" ]; then
+            echo "❌ Missing task execution log: $LOG_FILE"
+            exit 1
+          fi
+
+          python3 - "$LOG_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+failed = int(data.get("total_failed", 0))
+completed = int(data.get("total_completed", 0))
+generated = int(data.get("total_generated", 0))
+print(f"📊 Generator receipt: generated={generated} completed={completed} failed={failed}")
+if failed:
+    print("❌ Task failures detected; refusing autonomous commit.")
+    raise SystemExit(1)
+PY
+
+          echo "✅ Bounded task run completed with no recorded task failures."
       
       - name: 📊 Upload Task Logs
         if: always()
@@ -79,8 +115,8 @@ jobs:
             git add -A
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
             
-            # Count changes
-            CHANGES=$(git diff --cached --shortstat | sed 's/[^0-9]*//g' | awk '{print $1}')
+            # Count changed paths, not insertion/deletion counts.
+            CHANGES=$(git diff --cached --name-only | wc -l | tr -d ' ')
             
             # Create commit message
             COMMIT_MSG="🤖 Real-time auto-updates: $TIMESTAMP - Generated and executed tasks autonomously - Changes: $CHANGES files - Task logs in logs/ directory [Autonomous Task Generator]"
@@ -98,12 +134,20 @@ jobs:
           echo "## 🔄 Real-Time Task Generation Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Generate dashboard with existing script
-          if [ -f ".github/scripts/metrics_dashboard.py" ]; then
-            echo "### 📊 Task Execution Summary" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Real-time task generator executed successfully" >> $GITHUB_STEP_SUMMARY
+          if [ -f "logs/tasks_$(date -u +%Y%m%d).json" ]; then
+            echo "### 📊 Task Execution Receipt" >> $GITHUB_STEP_SUMMARY
+            python3 - "logs/tasks_$(date -u +%Y%m%d).json" <<'PY' >> "$GITHUB_STEP_SUMMARY"
+import json
+import sys
+from pathlib import Path
+d=json.loads(Path(sys.argv[1]).read_text())
+print(f"- Generated: {d.get('total_generated', 0)}")
+print(f"- Completed: {d.get('total_completed', 0)}")
+print(f"- Failed: {d.get('total_failed', 0)}")
+PY
             echo "📁 Task logs available in logs/ directory" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No task execution receipt found" >> $GITHUB_STEP_SUMMARY
           fi
 
   # Separate job for longer running tasks (runs less frequently)
