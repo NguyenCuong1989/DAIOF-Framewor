@@ -28,27 +28,27 @@ jobs:
   autonomous_development:
     runs-on: ubuntu-latest
     name: Self-Developing Organism
-    
+
     steps:
       - name: 🧬 Clone Organism DNA
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: 🐍 Prepare Organism Environment
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
-      
+
       - name: 💉 Install Organism Dependencies
         run: |
           pip install --upgrade pip
           pip install PyGithub pyyaml requests python-dotenv
           pip install pylint autopep8 black isort
           pip install matplotlib seaborn pandas
-      
+
       - name: 🧠 Load Organism Genome
         run: |
           echo "🧬 Loading organism configuration..."
@@ -56,10 +56,10 @@ jobs:
           import yaml
           with open('.github/DIGITAL_ORGANISM_GENOME.yml') as f:
               genome = yaml.safe_load(f)
-              print(f\"Organism loaded: {genome['metadata']['name']}\")
-              print(f\"Learning rate: {genome['genes']['behavioral_traits']['learning_rate']}\")
+              print(f\"Organism loaded: {genome['organism_identity']['name']}\")
+              print(f\"Learning rate: {genome['digital_genome']['primary_characteristics']['learning_rate']}\")
           "
-      
+
       - name: 🤖 Execute Autonomous Development
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -67,7 +67,7 @@ jobs:
         run: |
           echo "🚀 Starting autonomous development cycle..."
           python3 .github/scripts/autonomous_developer.py
-      
+
       - name: 📊 Generate Development Report
         if: always()
         run: |
@@ -75,14 +75,13 @@ jobs:
           if [ -f "reports/development_report.md" ]; then
             cat reports/development_report.md >> $GITHUB_STEP_SUMMARY
           fi
-      
+
       - name: 💾 Commit Organism Evolution
         if: success()
         run: |
           git config user.name "DAIOF Organism"
           git config user.email "organism@daiof-framework.dev"
-          
-          # Check if there are changes
+
           if [ -n "$(git status --porcelain)" ]; then
             git add .
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
@@ -93,7 +92,7 @@ jobs:
           else
             echo "ℹ️ No changes to commit"
           fi
-      
+
       - name: 🏥 Update Health Status
         if: always()
         run: |
