@@ -1,0 +1,12 @@
+{
+  "scenario": "capability-router-chain",
+  "steps": [
+    "discover",
+    "select_minimum_sufficient",
+    "invoke",
+    "propagate_provenance",
+    "verify",
+    "stop_on_failure"
+  ],
+  "completion_gate": "CI_GREEN"
+}
