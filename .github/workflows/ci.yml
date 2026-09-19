@@ -96,8 +96,9 @@ jobs:
         python -c "
         from digital_ai_organism_framework import DigitalOrganism
         organism = DigitalOrganism(name='ci-lifecycle')
-        for _ in range(10):
-            organism.live_cycle(0.1)
+        organism.live_cycle(0.1)
+        assert organism.age == 0.1
+        assert organism.status == 'alive'
         assert organism.health > 0
         print(f'✅ Organism lifecycle working (health: {organism.health:.2f})')
         "
