@@ -7,3 +7,9 @@
 [submodule "vscode-python-environments"]
 	path = vscode-python-environments
 	url = https://github.com/NguyenCuong1989/vscode-python-environments
+[submodule "DAIOF-Framework"]
+	path = DAIOF-Framework
+	url = https://github.com/NguyenCuong1989/DAIOF-Framework
+[submodule "code-settings-sync"]
+	path = code-settings-sync
+	url = https://github.com/shanalikhan/code-settings-sync.git

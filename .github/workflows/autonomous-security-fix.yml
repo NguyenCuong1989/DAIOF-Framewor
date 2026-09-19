@@ -120,8 +120,8 @@ jobs:
               REMAINING=$(npm audit --json 2>&1 | grep -o '"high":[0-9]*' | grep -o '[0-9]*' || echo "0")
               
               if [ "$REMAINING" -gt 0 ]; then
-                echo "  → Running npm audit fix --force for remaining issues..."
-                npm audit fix --force || true
+                echo "  → High-severity vulnerabilities remain after safe fix; fail closed."
+                exit 1
               fi
               
               echo "  ✅ Fixes applied to $DIR"
@@ -205,33 +205,19 @@ jobs:
             fi
           fi
       
-      - name: 💾 Commit Autonomous Fixes
-        id: commit_fixes
+      - name: 🔎 Detect Autonomous Fixes
+        id: detect_fixes
         run: |
-          git config user.name "DAIOF Autonomous Security Fix"
-          git config user.email "security-fix@daiof-framework.dev"
-          
-          # Check for changes
           if [ -n "$(git status --porcelain)" ]; then
-            echo "📝 Committing autonomous security fixes..."
-            
-            git add -A
-            
-            # Generate detailed commit message
-            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-            FIX_TYPE="${{ github.event.inputs.fix_type || 'all_fixes' }}"
-            
-            git commit -m "🛡️ Autonomous Security Fix: $TIMESTAMP - Type: $FIX_TYPE - Framework: HYPERAI - Creator: Nguyễn Đức Cường (alpha_prime_omega) - Applied npm/python fixes - Convergence D_{k+1} ≤ D_k maintained - Verification: 4287"
-            
-            echo "changes_committed=true" >> $GITHUB_OUTPUT
-            echo "✅ Autonomous fixes committed"
+            echo "changes_detected=true" >> "$GITHUB_OUTPUT"
+            echo "🔎 Changes detected; leaving commit creation to the review PR step."
           else
-            echo "ℹ️ No security issues found - system optimal"
-            echo "changes_committed=false" >> $GITHUB_OUTPUT
+            echo "changes_detected=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ No working-tree changes detected."
           fi
-      
+
       - name: 🚀 Create Pull Request for Review
-        if: steps.commit_fixes.outputs.changes_committed == 'true'
+        if: steps.detect_fixes.outputs.changes_detected == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

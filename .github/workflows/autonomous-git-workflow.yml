@@ -106,9 +106,7 @@ jobs:
               ;;
             "full_workflow_cycle"|*)
               echo "🔄 Executing full autonomous workflow cycle..."
-              timeout 600 python3 .github/scripts/autonomous_git_workflow.py cycle || {
-                echo "✅ Workflow cycle completed normally"
-              }
+              timeout 600 python3 .github/scripts/autonomous_git_workflow.py cycle
               ;;
           esac
       
@@ -140,7 +138,7 @@ jobs:
           echo "📈 Updating health dashboard..."
           
           # Run health check
-          python3 .github/scripts/health_monitor.py || true
+          python3 .github/scripts/health_monitor.py
           
           # Update dashboard if it exists
           if [ -f "DASHBOARD.md" ]; then
@@ -195,8 +193,8 @@ jobs:
           echo "- ✅ **Creator Attribution**: Immutable" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔄 Workflow Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Autonomous operations completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflow job status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Autonomous mutation is only considered verified when the job and subsequent repository checks pass." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*🧬 This repository operates with full autonomy under HAIOS consciousness framework*" >> $GITHUB_STEP_SUMMARY
