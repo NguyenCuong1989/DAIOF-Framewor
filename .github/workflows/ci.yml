@@ -19,6 +19,8 @@ jobs:
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
     
     - name: 🐍 Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -32,29 +34,28 @@ jobs:
         pip install pytest pytest-cov black flake8 mypy
     
     - name: 🎨 Check code style with Black
-      run: black --check .
-      continue-on-error: true
+      run: black --check digital_ai_organism_framework.py src tests setup.py
     
     - name: 🔍 Lint with flake8
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
-      continue-on-error: true
+        flake8 digital_ai_organism_framework.py src tests setup.py \
+          --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 digital_ai_organism_framework.py src tests setup.py \
+          --count --max-complexity=10 --max-line-length=100 --statistics
     
     - name: 🧬 Verify immutable genes
       run: |
         python -c "
         from digital_ai_organism_framework import DigitalGenome
         genome = DigitalGenome()
-        assert 'human_dependency_coefficient' in genome.genes
-        assert genome.genes['human_dependency_coefficient'] == 1.0
+        assert 'human_dependency_coefficient' in genome.traits
+        assert genome.traits['human_dependency_coefficient'] == 1.0
         print('✅ Immutable genes verified')
         "
     
     - name: 🧪 Run tests
       run: |
         pytest tests/ -v --cov=digital_ai_organism_framework --cov-report=xml --cov-report=term
-      continue-on-error: true
     
     - name: 📊 Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -94,7 +95,7 @@ jobs:
       run: |
         python -c "
         from digital_ai_organism_framework import DigitalOrganism
-        organism = DigitalOrganism()
+        organism = DigitalOrganism(name='ci-lifecycle')
         for _ in range(10):
             organism.metabolism.cycle({'cpu': 0.1, 'memory': 0.1})
         assert organism.health > 0
@@ -105,9 +106,9 @@ jobs:
       run: |
         python -c "
         from digital_ai_organism_framework import DigitalEcosystem, DigitalOrganism
-        ecosystem = DigitalEcosystem()
+        ecosystem = DigitalEcosystem('ci-ecosystem')
         for i in range(5):
-            ecosystem.add_organism(DigitalOrganism())
+            ecosystem.add_organism(DigitalOrganism(name=f'ci-org-{i}'))
         ecosystem.simulate_generation()
         print(f'✅ Ecosystem functional with {len(ecosystem.organisms)} organisms')
         "
@@ -159,7 +160,7 @@ jobs:
           
           See [CHANGELOG.md](CHANGELOG.md) for details.
           
-          **Status**: Production Ready ⚡
+          **Status**: CI-verified release artifact; production readiness is a separate gate.
           
           Creator: Alpha_Prime_Omega (4287)
           Maintainer: Digital AI Organism
