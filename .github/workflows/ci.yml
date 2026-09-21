@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     name: Test on Python ${{ matrix.python-version }}
+    env:
+      PYTHONPATH: ${{ github.workspace }}/src
     runs-on: ${{ matrix.os }}
     
     strategy:
@@ -67,6 +69,8 @@ jobs:
 
   validate:
     name: Validate Framework
+    env:
+      PYTHONPATH: ${{ github.workspace }}/src
     runs-on: ubuntu-latest
     
     steps:
