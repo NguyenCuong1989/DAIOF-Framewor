@@ -1,1 +1,5 @@
-{"verification":"CI_REQUIRED","target":"main"}
+{
+  "verification": "CI_REQUIRED",
+  "target": "main",
+  "implementation_ref": "skill-runtime-verification-finalize"
+}
