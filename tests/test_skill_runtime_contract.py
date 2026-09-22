@@ -1,8 +1,3 @@
-from hyperai.skill_runtime_contract import (
-    FAILURE_CLASSES,
-    RESULT_STATUS,
-    SKILL_CONTRACT_FIELDS,
-)
 from hyperai.skill_runtime_contract import (FAILURE_CLASSES, RESULT_STATUS,
                                             SKILL_CONTRACT_FIELDS)
 
