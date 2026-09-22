@@ -1,14 +1,8 @@
 import pytest
 
-from hyperai.skill_runtime import (
-    CapabilityRouter,
-    ChainExecutor,
-    Skill,
-    SkillRegistry,
-    SkillResult,
-    SkillStatus,
-    VerificationEvidence,
-)
+from hyperai.skill_runtime import (CapabilityRouter, ChainExecutor, Skill,
+                                   SkillRegistry, SkillResult, SkillStatus,
+                                   VerificationEvidence)
 
 
 def verified(value, output):
@@ -17,7 +11,9 @@ def verified(value, output):
 
 def test_router_selects_minimum_sufficient_chain():
     registry = SkillRegistry()
-    registry.register(Skill("discover", "discover", "find capability", handler=lambda x: x + "-d"))
+    registry.register(
+        Skill("discover", "discover", "find capability", handler=lambda x: x + "-d")
+    )
     registry.register(
         Skill(
             "specialist",
@@ -27,7 +23,9 @@ def test_router_selects_minimum_sufficient_chain():
             verifier=verified,
         )
     )
-    registry.register(Skill("unrelated", "unrelated", "weather", handler=lambda x: x + "-u"))
+    registry.register(
+        Skill("unrelated", "unrelated", "weather", handler=lambda x: x + "-u")
+    )
 
     plan = CapabilityRouter(registry).select("analyze capability")
 
@@ -46,8 +44,12 @@ def test_router_can_select_multiple_capabilities():
 
 def test_chain_passes_output_to_next_skill_and_records_provenance():
     registry = SkillRegistry()
-    registry.register(Skill("a", "A", "first", handler=lambda x: x + "A", verifier=verified))
-    registry.register(Skill("b", "B", "second", handler=lambda x: x + "B", verifier=verified))
+    registry.register(
+        Skill("a", "A", "first", handler=lambda x: x + "A", verifier=verified)
+    )
+    registry.register(
+        Skill("b", "B", "second", handler=lambda x: x + "B", verifier=verified)
+    )
     executor = ChainExecutor(registry)
 
     results = executor.run(["a", "b"], "start")
@@ -86,7 +88,9 @@ def test_failed_skill_does_not_allow_downstream_execution():
             verifier=verified,
         )
     )
-    registry.register(Skill("next", "next", "second", handler=lambda x: x + "next", verifier=verified))
+    registry.register(
+        Skill("next", "next", "second", handler=lambda x: x + "next", verifier=verified)
+    )
     results = ChainExecutor(registry).run(["bad", "next"], "x")
 
     assert results[0].status == SkillStatus.FAILED

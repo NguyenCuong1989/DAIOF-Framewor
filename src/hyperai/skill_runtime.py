@@ -1,8 +1,9 @@
 """Evidence-gated APΩ skill runtime primitives."""
+
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from hashlib import sha256
-import json
 from typing import Any, Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
@@ -76,9 +77,16 @@ class SkillRegistry:
 
     def discover(self, task: str):
         terms = set(task.lower().split())
-        return [s for s in self._skills.values() if terms & set(s.trigger.lower().split())]
+        return [
+            s for s in self._skills.values() if terms & set(s.trigger.lower().split())
+        ]
 
-    def promote(self, skill_id: str, status: SkillStatus, evidence: Iterable[VerificationEvidence]):
+    def promote(
+        self,
+        skill_id: str,
+        status: SkillStatus,
+        evidence: Iterable[VerificationEvidence],
+    ):
         evidence = list(evidence)
         skill = self.get(skill_id)
         if status == SkillStatus.VERIFIED:
@@ -101,7 +109,9 @@ class CapabilityRouter:
 
     def select(self, task: str):
         terms = set(task.lower().split())
-        candidates = [s for s in self.registry.discover(task) if s.availability == "available"]
+        candidates = [
+            s for s in self.registry.discover(task) if s.availability == "available"
+        ]
         if not candidates:
             raise LookupError(f"no available capability for task: {task}")
 
