@@ -16,3 +16,11 @@ A runtime implementation is verified only when CI executes the test suite for th
 ## Pressure case
 
 Register two skills sharing a generic task term and one skill with the exact task phrase. The router must select the exact-fit capability. Then execute a two-node chain and verify that node two consumes node one's run identifier.
+
+
+## Current verification state
+
+- Runtime hardening: `skill-runtime-verification-finalize`
+- Verification: pending CI on the hardening branch.
+- The runtime now requires registry-issued, execution-bound evidence before `VERIFIED` promotion.
+- The router fails closed when no complete capability chain covers the task.

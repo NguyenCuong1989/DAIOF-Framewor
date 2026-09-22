@@ -1,5 +1,13 @@
 import pytest
 
+from hyperai.skill_runtime import (
+    CapabilityRouter,
+    ChainExecutor,
+    Skill,
+    SkillRegistry,
+    SkillStatus,
+    VerificationEvidence,
+)
 from hyperai.skill_runtime import (CapabilityRouter, ChainExecutor, Skill,
                                    SkillRegistry, SkillResult, SkillStatus,
                                    VerificationEvidence)
@@ -42,6 +50,14 @@ def test_router_can_select_multiple_capabilities():
     assert [skill.id for skill in plan] == ["first", "second"]
 
 
+def test_router_rejects_an_insufficient_chain():
+    registry = SkillRegistry()
+    registry.register(Skill("first", "First", "first", handler=lambda x: x))
+
+    with pytest.raises(LookupError, match="uncovered terms"):
+        CapabilityRouter(registry).select("first missing")
+
+
 def test_chain_passes_output_to_next_skill_and_records_provenance():
     registry = SkillRegistry()
     registry.register(
@@ -54,9 +70,14 @@ def test_chain_passes_output_to_next_skill_and_records_provenance():
 
     results = executor.run(["a", "b"], "start")
 
-    assert [r.status for r in results] == [SkillStatus.VERIFIED, SkillStatus.VERIFIED]
+    assert [r.status for r in results] == [
+        SkillStatus.VERIFIED,
+        SkillStatus.VERIFIED,
+    ]
     assert results[-1].output == "startAB"
     assert results[1].input_refs == [results[0].run_id]
+    assert results[0].evidence_refs
+    assert registry.get("a").last_verified_at is not None
 
 
 def test_verified_result_requires_explicit_verifier():
@@ -89,6 +110,13 @@ def test_failed_skill_does_not_allow_downstream_execution():
         )
     )
     registry.register(
+        Skill(
+            "next",
+            "next",
+            "second",
+            handler=lambda x: x + "next",
+            verifier=verified,
+        )
         Skill("next", "next", "second", handler=lambda x: x + "next", verifier=verified)
     )
     results = ChainExecutor(registry).run(["bad", "next"], "x")
@@ -99,12 +127,13 @@ def test_failed_skill_does_not_allow_downstream_execution():
 
 def test_mutation_capability_requires_explicit_authorization():
     registry = SkillRegistry()
+    called = []
     registry.register(
         Skill(
             "mutate",
             "Mutate",
             "mutate",
-            handler=lambda x: x,
+            handler=lambda x: called.append(x),
             side_effect_class="mutation",
             permission_class="user-gated",
             verifier=verified,
@@ -114,6 +143,7 @@ def test_mutation_capability_requires_explicit_authorization():
 
     assert result.status == SkillStatus.FAILED
     assert result.error_class == "PERMISSION_DENIED"
+    assert called == []
 
 
 def test_registry_rejects_verified_without_evidence():
@@ -128,12 +158,30 @@ def test_registry_rejects_unbound_verified_evidence():
     registry = SkillRegistry()
     skill = registry.register(Skill("a", "A", "first", handler=lambda x: x))
     evidence = VerificationEvidence(
-        skill_id="other",
+        skill_id=skill.id,
         version=skill.version,
         run_id="run",
         evidence_id="evidence",
         output_digest="digest",
+        claim="fabricated",
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="registry-issued"):
         registry.promote(skill.id, SkillStatus.VERIFIED, evidence=[evidence])
+
+
+def test_registry_accepts_only_runtime_issued_evidence():
+    registry = SkillRegistry()
+    skill = registry.register(
+        Skill("a", "A", "first", handler=lambda x: x, verifier=verified)
+    )
+    result = ChainExecutor(registry).invoke("a", "x")
+
+    evidence_id = result.evidence_refs[0]
+    evidence = registry._verification_evidence[evidence_id]
+
+    assert evidence.skill_id == skill.id
+    assert evidence.version == skill.version
+    assert evidence.run_id == result.run_id
+    assert evidence.output_digest == ChainExecutor._digest(result.output)
+    assert registry.get(skill.id).status == SkillStatus.VERIFIED

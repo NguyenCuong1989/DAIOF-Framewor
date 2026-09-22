@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
 from typing import Any, Callable, Dict, Iterable, List, Optional
@@ -13,8 +14,11 @@ class SkillStatus(str, Enum):
     SELECTED = "selected"
     INVOKED = "invoked"
     RETURNED = "returned"
+    OBSERVED = "observed"
     FAILED = "failed"
+    PARTIAL = "partial"
     VERIFIED = "verified"
+    STALE = "stale"
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,7 @@ class VerificationEvidence:
     run_id: str
     evidence_id: str
     output_digest: str
+    claim: str
 
 
 @dataclass
@@ -63,6 +68,7 @@ class SkillResult:
 class SkillRegistry:
     def __init__(self):
         self._skills: Dict[str, Skill] = {}
+        self._verification_evidence: Dict[str, VerificationEvidence] = {}
 
     def register(self, skill: Skill):
         if skill.id in self._skills:
@@ -77,6 +83,34 @@ class SkillRegistry:
 
     def discover(self, task: str):
         terms = set(task.lower().split())
+        if not terms:
+            return []
+        return [
+            skill
+            for skill in self._skills.values()
+            if terms & set(skill.trigger.lower().split())
+        ]
+
+    def _record_verification_evidence(
+        self, evidence: Iterable[VerificationEvidence]
+    ) -> None:
+        for item in evidence:
+            if not isinstance(item, VerificationEvidence):
+                raise TypeError("verification evidence must use VerificationEvidence")
+            if not all(
+                (
+                    item.skill_id,
+                    item.version,
+                    item.run_id,
+                    item.evidence_id,
+                    item.output_digest,
+                    item.claim,
+                )
+            ):
+                raise ValueError("verification evidence fields must be non-empty")
+            if item.evidence_id in self._verification_evidence:
+                raise ValueError(f"duplicate evidence id: {item.evidence_id}")
+            self._verification_evidence[item.evidence_id] = item
         return [
             s for s in self._skills.values() if terms & set(s.trigger.lower().split())
         ]
@@ -92,13 +126,14 @@ class SkillRegistry:
         if status == SkillStatus.VERIFIED:
             if not evidence:
                 raise ValueError("verified status requires evidence")
-            if any(
-                not isinstance(item, VerificationEvidence)
-                or item.skill_id != skill.id
-                or item.version != skill.version
-                for item in evidence
-            ):
-                raise ValueError("verified status requires runtime-bound evidence")
+            for item in evidence:
+                if not isinstance(item, VerificationEvidence):
+                    raise TypeError("verified status requires VerificationEvidence")
+                if self._verification_evidence.get(item.evidence_id) != item:
+                    raise ValueError("verified status requires registry-issued evidence")
+                if item.skill_id != skill.id or item.version != skill.version:
+                    raise ValueError("verified status requires runtime-bound evidence")
+            skill.last_verified_at = datetime.now(timezone.utc).isoformat()
         skill.status = status
         return skill
 
@@ -110,6 +145,9 @@ class CapabilityRouter:
     def select(self, task: str):
         terms = set(task.lower().split())
         candidates = [
+            skill
+            for skill in self.registry.discover(task)
+            if skill.availability == "available"
             s for s in self.registry.discover(task) if s.availability == "available"
         ]
         if not candidates:
@@ -120,11 +158,11 @@ class CapabilityRouter:
         pool = list(candidates)
         while pool and remaining:
             pool.sort(
-                key=lambda s: (
-                    -len(remaining & set(s.trigger.lower().split())),
-                    s.side_effect_class != "none",
-                    len(s.trigger),
-                    s.id,
+                key=lambda skill: (
+                    -len(remaining & set(skill.trigger.lower().split())),
+                    skill.side_effect_class != "none",
+                    len(skill.trigger),
+                    skill.id,
                 )
             )
             best = pool.pop(0)
@@ -133,6 +171,12 @@ class CapabilityRouter:
                 break
             selected.append(best)
             remaining -= covered
+
+        if remaining:
+            raise LookupError(
+                f"no sufficient capability chain for task: {task}; "
+                f"uncovered terms: {sorted(remaining)}"
+            )
 
         for skill in selected:
             skill.status = SkillStatus.SELECTED
@@ -153,7 +197,7 @@ class ChainExecutor:
         skill_id: str,
         value: Any,
         verify: bool = True,
-        input_refs=None,
+        input_refs: Optional[Iterable[str]] = None,
         authorized: bool = False,
     ):
         skill = self.registry.get(skill_id)
@@ -197,7 +241,7 @@ class ChainExecutor:
             )
 
         try:
-            raw_evidence = list(skill.verifier(value, output))
+            claims = [str(claim).strip() for claim in skill.verifier(value, output)]
         except Exception as exc:
             skill.status = SkillStatus.FAILED
             return SkillResult(
@@ -210,7 +254,7 @@ class ChainExecutor:
                 error_class=f"VERIFICATION_{type(exc).__name__}",
             )
 
-        if not raw_evidence:
+        if not claims or any(not claim for claim in claims):
             return SkillResult(
                 skill_id=skill_id,
                 run_id=run_id,
@@ -220,17 +264,20 @@ class ChainExecutor:
                 input_refs=refs,
             )
 
+        output_digest = self._digest(output)
         evidence = [
             VerificationEvidence(
                 skill_id=skill.id,
                 version=skill.version,
                 run_id=run_id,
                 evidence_id=str(uuid4()),
-                output_digest=self._digest(output),
+                output_digest=output_digest,
+                claim=claim,
             )
-            for _ in raw_evidence
+            for claim in claims
         ]
-        skill.status = SkillStatus.VERIFIED
+        self.registry._record_verification_evidence(evidence)
+        self.registry.promote(skill.id, SkillStatus.VERIFIED, evidence)
         return SkillResult(
             skill_id=skill_id,
             run_id=run_id,
@@ -243,7 +290,7 @@ class ChainExecutor:
             next_eligible=True,
         )
 
-    def run(self, skill_ids, value, authorized: bool = False):
+    def run(self, skill_ids: Iterable[str], value: Any, authorized: bool = False):
         results = []
         current = value
         previous = None

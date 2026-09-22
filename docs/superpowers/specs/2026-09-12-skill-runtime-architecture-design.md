@@ -2,7 +2,7 @@
 
 ## Status
 
-Design approved in conversation; implementation is not yet started.
+The implementation slice is merged to `main`; verification hardening is isolated on `skill-runtime-verification-finalize` pending CI.
 
 ## Goal
 
@@ -75,7 +75,7 @@ Output: ordered capability chain with rationale, required inputs, expected outpu
 
 Selection factors: task fit, target fit, domain, output contract, availability, authority, side-effect class, evidence quality, determinism, cost, reversibility, and current state.
 
-The router must not force every task through the same chain. It selects the smallest sufficient set and can terminate early when verification is satisfied.
+The router must not force every task through the same chain. It selects the smallest sufficient set and fails closed when the requested task cannot be fully covered.
 
 ### 2. Skill Registry
 
@@ -93,7 +93,7 @@ side_effect_class: none|read|mutation|external
 permission_class: none|user-gated|connector-gated|runtime-gated
 version: string
 provenance: string
-status: discovered|selected|executed|failed|verified|stale
+status: discovered|selected|invoked|returned|observed|failed|partial|verified|stale
 contract_hash: string
 last_verified_at: string|null
 ```
@@ -114,7 +114,7 @@ error_class: null|string
 next_eligible: true|false
 ```
 
-The executor must refuse to upgrade `returned` to `verified` without explicit evidence.
+The executor must refuse to upgrade `returned` to `verified` without verifier-produced evidence bound to the skill version and execution result.
 
 ### 4. Skill Builder
 
@@ -134,7 +134,8 @@ Verification checks:
 - expected failure behavior;
 - authority/mutation gates;
 - no-unverified-success invariant;
-- repeatability where deterministic behavior is expected.
+- repeatability where deterministic behavior is expected;
+- evidence binding to the current execution output.
 
 ## Chain Semantics
 
