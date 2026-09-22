@@ -1,9 +1,10 @@
 """Evidence-gated APΩ skill runtime primitives."""
+
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
-import json
 from typing import Any, Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
@@ -110,6 +111,9 @@ class SkillRegistry:
             if item.evidence_id in self._verification_evidence:
                 raise ValueError(f"duplicate evidence id: {item.evidence_id}")
             self._verification_evidence[item.evidence_id] = item
+        return [
+            s for s in self._skills.values() if terms & set(s.trigger.lower().split())
+        ]
 
     def promote(
         self,
@@ -144,6 +148,7 @@ class CapabilityRouter:
             skill
             for skill in self.registry.discover(task)
             if skill.availability == "available"
+            s for s in self.registry.discover(task) if s.availability == "available"
         ]
         if not candidates:
             raise LookupError(f"no available capability for task: {task}")

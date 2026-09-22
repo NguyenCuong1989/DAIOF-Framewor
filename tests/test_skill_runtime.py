@@ -8,6 +8,9 @@ from hyperai.skill_runtime import (
     SkillStatus,
     VerificationEvidence,
 )
+from hyperai.skill_runtime import (CapabilityRouter, ChainExecutor, Skill,
+                                   SkillRegistry, SkillResult, SkillStatus,
+                                   VerificationEvidence)
 
 
 def verified(value, output):
@@ -114,6 +117,7 @@ def test_failed_skill_does_not_allow_downstream_execution():
             handler=lambda x: x + "next",
             verifier=verified,
         )
+        Skill("next", "next", "second", handler=lambda x: x + "next", verifier=verified)
     )
     results = ChainExecutor(registry).run(["bad", "next"], "x")
 
