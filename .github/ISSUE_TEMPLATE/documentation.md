@@ -1,9 +1,10 @@
 ---
 name: Documentation Improvement
 about: Suggest improvements to documentation
-title: '[DOCS] '
+title: "[DOCS] "
 labels: documentation
 assignees: ''
+
 ---
 
 ## 📖 Documentation Issue

@@ -1,9 +1,10 @@
 ---
 name: Feature Request
 about: Suggest an idea for DAIOF
-title: '[FEATURE] '
+title: "[FEATURE] "
 labels: enhancement
 assignees: ''
+
 ---
 
 ## 🎯 Problem Statement

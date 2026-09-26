@@ -1,9 +1,10 @@
 ---
 name: Question
 about: Ask a question about DAIOF
-title: '[QUESTION] '
+title: "[QUESTION] "
 labels: question
 assignees: ''
+
 ---
 
 ## ❓ Your Question
