@@ -1,0 +1,4 @@
+ERROR:pip_audit._virtual_env:internal pip failure: ERROR: Could not find a version that satisfies the requirement python>=3.8 (from versions: none)
+ERROR: No matching distribution found for python>=3.8
+
+ERROR:pip_audit._cli:Failed to install packages: ['/tmp/tmpeo9o37su/bin/python', '-m', 'pip', 'install', '--no-input', '--keyring-provider=subprocess', '--dry-run', '--report', '/tmp/tmpzgib3u2m/tmpin71_i41', '-r', 'DAIOF-Framework/requirements.txt']
